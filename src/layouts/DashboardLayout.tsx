@@ -5,7 +5,8 @@ import { AppSidebar } from '@/components/sidebar'
 import { SafeVerifyDialog } from '@/components/SafeVerifyDialog'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchCurrentUser, clearUser } from '@/store/slices/userSlice'
-import { setSafeVerifyCallback } from '@/services/api'
+import { setSafeVerifyCallback, TOKEN_KEY } from '@/services/api'
+import { logout } from '@/services/auth'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -63,9 +64,14 @@ export function DashboardLayout() {
     avatar: currentUser?.avatarUrl || '',
   }
 
-  const handleLogout = () => {
-    dispatch(clearUser())
-    navigate('/auth/login')
+  const handleLogout = async () => {
+    try {
+      await logout()
+    } finally {
+      localStorage.removeItem(TOKEN_KEY)
+      dispatch(clearUser())
+      navigate('/auth/login')
+    }
   }
 
   return (
