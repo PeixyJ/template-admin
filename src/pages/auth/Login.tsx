@@ -1,0 +1,37 @@
+import { Logo } from '@/components/common'
+import { LoginForm } from '@/features/auth'
+import { MotionPreset } from '@/components/ui/motion-preset'
+import { Magnetic } from '@/components/ui/magnet-effect'
+import { StarsBackground } from '@/components/ui/background-stars'
+
+export default function LoginPage() {
+  return (
+    <div className='grid min-h-svh lg:grid-cols-2'>
+      <div className='flex flex-col gap-4 p-6 md:p-10'>
+        <div className='flex justify-center gap-2 md:justify-start'>
+          <a href='/' className='flex items-center gap-2 font-medium'>
+            <Logo />
+          </a>
+        </div>
+        <div className='flex flex-1 items-center justify-center'>
+          <div className='w-full max-w-xs'>
+            <LoginForm />
+          </div>
+        </div>
+      </div>
+      <MotionPreset
+        component='div'
+        className='relative hidden items-center justify-center overflow-hidden bg-black lg:flex'
+      >
+        <StarsBackground className='absolute inset-0' />
+        <Magnetic strength={1} range={120}>
+          <img
+            src='/hero-avatar.webp'
+            alt='Login background'
+            className='relative z-10 max-h-96 w-auto object-contain transition-transform duration-500 hover:-translate-y-1.5 hover:scale-110'
+          />
+        </Magnetic>
+      </MotionPreset>
+    </div>
+  )
+}
