@@ -1,10 +1,4 @@
-import {
-  Folder,
-  MoreHorizontal,
-  Share,
-  Trash2,
-  type LucideIcon,
-} from 'lucide-react'
+import { Folder, MoreHorizontal, Share, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import {
@@ -23,12 +17,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar'
-
-export interface NavProjectItem {
-  name: string
-  url: string
-  icon: LucideIcon
-}
+import type { NavProjectItem } from '@/config/navigation'
 
 interface NavProjectsProps {
   projects: NavProjectItem[]

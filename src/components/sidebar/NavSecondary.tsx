@@ -1,5 +1,4 @@
 import * as React from 'react'
-import { type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import {
@@ -10,12 +9,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { SettingsDialog } from './SettingsDialog'
-
-export interface NavSecondaryItem {
-  title: string
-  url: string
-  icon: LucideIcon
-}
+import type { NavSecondaryItem } from '@/config/navigation'
 
 interface NavSecondaryProps extends React.ComponentPropsWithoutRef<typeof SidebarGroup> {
   items: NavSecondaryItem[]

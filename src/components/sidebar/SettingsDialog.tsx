@@ -251,7 +251,7 @@ function ProfileContent() {
       <div className="flex items-center gap-4">
         <div className="relative">
           <Avatar className="size-20">
-            <AvatarImage src={currentUser?.avatarUrl} alt={currentUser?.nickname} />
+            <AvatarImage src={currentUser?.avatarUrl ?? undefined} alt={currentUser?.nickname} />
             <AvatarFallback className="text-lg">
               {currentUser?.nickname?.charAt(0)?.toUpperCase() || "U"}
             </AvatarFallback>

@@ -6,6 +6,9 @@ import {
   RegisterPage,
   ForgetPasswordPage,
   DashboardPage,
+  TeamsPage,
+  UsersPage,
+  AdminsPage,
 } from '@/pages'
 import { DashboardLayout } from '@/layouts'
 
@@ -38,6 +41,18 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <DashboardPage />,
+      },
+      {
+        path: 'team-management/teams',
+        element: <TeamsPage />,
+      },
+      {
+        path: 'team-management/users',
+        element: <UsersPage />,
+      },
+      {
+        path: 'team-management/admins',
+        element: <AdminsPage />,
       },
     ],
   },

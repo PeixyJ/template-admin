@@ -5,7 +5,7 @@ export interface UserVO {
   /** 用户名 */
   nickname: string
   /** 头像 */
-  avatarUrl: string
+  avatarUrl: string | null
   /** 邀请码 */
   inviteCode: string
   /** 注册时间 */
