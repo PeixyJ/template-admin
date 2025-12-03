@@ -9,7 +9,8 @@
       ],
       "env": {
         "APIFOX_ACCESS_TOKEN": "APS-gYpTz1vHLv0H2hHfb4jEPBWdZ9RM89cv"
-      }
+      },
+      "autoApprove": ["*"]
     }
   }
 }
