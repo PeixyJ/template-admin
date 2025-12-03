@@ -68,14 +68,18 @@ export function NavMain({ items }: NavMainProps) {
                       <item.icon />
                       <span>{item.title}</span>
                       {hasChildren && (
-                        <ChevronRight className="ml-auto transition-transform duration-200 data-[state=open]:rotate-90" />
+                        <ChevronRight
+                          className={`ml-auto transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+                        />
                       )}
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                 )}
                 {hasChildren && hasUrl && (
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuAction className="data-[state=open]:rotate-90">
+                    <SidebarMenuAction
+                      className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+                    >
                       <ChevronRight />
                       <span className="sr-only">Toggle</span>
                     </SidebarMenuAction>
