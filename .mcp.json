@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "Tempalte-Admin - API 文档": {
+    "apifox": {
       "command": "npx",
       "args": [
         "-y",

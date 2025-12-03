@@ -2,15 +2,40 @@ import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 
 import { GrantRecordDatatable } from '@/components/datatable/GrantRecordDatatable'
+import { GrantRecordDetailSheet } from '@/components/datatable/GrantRecordDetailSheet'
+import { CreateGrantDialog } from '@/components/datatable/CreateGrantDialog'
+import { RevokeGrantDialog } from '@/components/datatable/RevokeGrantDialog'
 import {
   getGrantRecordList,
   revokeGrant,
+  grantSubscription,
+  grantPoints,
+  grantResource,
+  grantEntitlement,
 } from '@/services/subscription'
-import type { GrantRecordVO, GrantRecordListParams } from '@/types/subscription.types'
+import type {
+  GrantRecordVO,
+  GrantRecordListParams,
+  GrantSubscriptionDTO,
+  GrantPointsDTO,
+  GrantResourceDTO,
+  GrantEntitlementDTO,
+} from '@/types/subscription.types'
 
 export default function Grants() {
   const [records, setRecords] = useState<GrantRecordVO[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Detail sheet state
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false)
+  const [selectedGrantId, setSelectedGrantId] = useState<number | null>(null)
+
+  // Create dialog state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+
+  // Revoke dialog state
+  const [revokeDialogOpen, setRevokeDialogOpen] = useState(false)
+  const [grantToRevoke, setGrantToRevoke] = useState<GrantRecordVO | null>(null)
 
   const fetchRecords = useCallback(async () => {
     setLoading(true)
@@ -38,28 +63,72 @@ export default function Grants() {
   }, [fetchRecords])
 
   const handleView = (record: GrantRecordVO) => {
-    // TODO: Open detail sheet
-    toast.info(`查看赠送记录: ${record.grantNo}`)
+    setSelectedGrantId(record.id)
+    setDetailSheetOpen(true)
   }
 
   const handleRevoke = async (record: GrantRecordVO) => {
-    try {
-      const response = await revokeGrant(record.id, { reason: '管理员撤销' })
-      if (response.data.code === 'SUCCESS') {
-        toast.success(`赠送记录 "${record.grantNo}" 已撤销`)
-        fetchRecords()
-      } else {
-        toast.error(response.data.message || '撤销赠送失败')
-      }
-    } catch (error) {
-      console.error('Failed to revoke grant:', error)
-      toast.error('撤销赠送失败')
+    setGrantToRevoke(record)
+    setRevokeDialogOpen(true)
+  }
+
+  const handleConfirmRevoke = async (grantId: number, reason: string) => {
+    const response = await revokeGrant(grantId, { reason })
+    if (response.data.code === 'SUCCESS') {
+      toast.success('赠送已撤销')
+      fetchRecords()
+    } else {
+      toast.error(response.data.message || '撤销赠送失败')
+      throw new Error(response.data.message)
     }
   }
 
   const handleCreate = () => {
-    // TODO: Open create dialog for different grant types
-    toast.info('新建赠送')
+    setCreateDialogOpen(true)
+  }
+
+  const handleGrantSubscription = async (data: GrantSubscriptionDTO) => {
+    const response = await grantSubscription(data)
+    if (response.data.code === 'SUCCESS') {
+      toast.success(`订阅赠送成功，赠送单号: ${response.data.data?.grantNo}`)
+      fetchRecords()
+    } else {
+      toast.error(response.data.message || '赠送订阅失败')
+      throw new Error(response.data.message)
+    }
+  }
+
+  const handleGrantPoints = async (data: GrantPointsDTO) => {
+    const response = await grantPoints(data)
+    if (response.data.code === 'SUCCESS') {
+      toast.success(`点数赠送成功，赠送单号: ${response.data.data?.grantNo}`)
+      fetchRecords()
+    } else {
+      toast.error(response.data.message || '赠送点数失败')
+      throw new Error(response.data.message)
+    }
+  }
+
+  const handleGrantResource = async (data: GrantResourceDTO) => {
+    const response = await grantResource(data)
+    if (response.data.code === 'SUCCESS') {
+      toast.success(`扩容包赠送成功，赠送单号: ${response.data.data?.grantNo}`)
+      fetchRecords()
+    } else {
+      toast.error(response.data.message || '赠送扩容包失败')
+      throw new Error(response.data.message)
+    }
+  }
+
+  const handleGrantEntitlement = async (data: GrantEntitlementDTO) => {
+    const response = await grantEntitlement(data)
+    if (response.data.code === 'SUCCESS') {
+      toast.success(`配额赠送成功，赠送单号: ${response.data.data?.grantNo}`)
+      fetchRecords()
+    } else {
+      toast.error(response.data.message || '赠送配额失败')
+      throw new Error(response.data.message)
+    }
   }
 
   return (
@@ -74,6 +143,31 @@ export default function Grants() {
           onCreateClick={handleCreate}
         />
       </div>
+
+      {/* Grant Detail Sheet */}
+      <GrantRecordDetailSheet
+        grantId={selectedGrantId}
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
+      />
+
+      {/* Create Grant Dialog */}
+      <CreateGrantDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onGrantSubscription={handleGrantSubscription}
+        onGrantPoints={handleGrantPoints}
+        onGrantResource={handleGrantResource}
+        onGrantEntitlement={handleGrantEntitlement}
+      />
+
+      {/* Revoke Grant Dialog */}
+      <RevokeGrantDialog
+        grant={grantToRevoke}
+        open={revokeDialogOpen}
+        onOpenChange={setRevokeDialogOpen}
+        onConfirm={handleConfirmRevoke}
+      />
     </div>
   )
 }

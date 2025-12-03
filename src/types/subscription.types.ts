@@ -592,26 +592,38 @@ export interface BatchVO {
 export interface AdminTransactionVO {
   /** ID */
   id: number
-  /** 账户ID */
-  accountId: number
+  /** 交易编号 */
+  transactionNo: string
   /** 团队ID */
   teamId: number
   /** 团队名称 */
   teamName: string
+  /** 用户ID */
+  userId: number | null
+  /** 用户昵称 */
+  userNickname: string | null
+  /** 批次ID */
+  batchId: number | null
+  /** 批次编号 */
+  batchNo: string | null
   /** 交易类型 */
-  type: string
+  transactionType: string
   /** 交易类型描述 */
-  typeDesc: string
-  /** 交易数量 */
-  amount: number
+  transactionTypeDesc: string
+  /** 交易点数 */
+  points: number
+  /** 交易前余额 */
+  balanceBefore: number
   /** 交易后余额 */
   balanceAfter: number
-  /** 来源 */
-  source: string
-  /** 来源描述 */
-  sourceDesc: string
-  /** 关联ID */
-  relatedId: number | null
+  /** 来源类型 */
+  sourceType: string
+  /** 来源ID */
+  sourceId: string | null
+  /** 来源详情 */
+  sourceDetail: string | null
+  /** 描述 */
+  description: string | null
   /** 备注 */
   remark: string | null
   /** 创建时间 */
@@ -652,11 +664,13 @@ export interface PointsTransactionListParams {
 export interface AdjustPointsDTO {
   /** 团队ID */
   teamId: number
-  /** 调整数量（正数增加，负数减少） */
-  amount: number
-  /** 调整原因 */
+  /** 调整点数（正数增加，负数减少） */
+  points: number
+  /** 调整原因/备注 */
   reason: string
-  /** 过期天数 */
+  /** 过期时间（仅增加点数时有效，不填则永不过期） */
+  expireAt?: string
+  /** 过期天数（仅增加点数时有效，从当前时间起计算） */
   expireDays?: number
 }
 

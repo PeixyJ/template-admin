@@ -6,8 +6,8 @@ import {
   Loader2Icon,
   RefreshCwIcon,
   EyeIcon,
-  PlusCircleIcon,
-  MinusCircleIcon,
+  SlidersHorizontalIcon,
+  HistoryIcon,
   UsersIcon,
   CoinsIcon,
   ClockIcon,
@@ -173,7 +173,7 @@ const columns: ColumnDef<PointsAccountVO>[] = [
             title="调整点数"
             onClick={() => meta?.onAdjust?.(row.original)}
           >
-            <PlusCircleIcon className="size-4 text-green-600" />
+            <SlidersHorizontalIcon className="size-4 text-green-600" />
             <span className="sr-only">调整点数</span>
           </Button>
           <Button
@@ -183,7 +183,7 @@ const columns: ColumnDef<PointsAccountVO>[] = [
             title="查看交易记录"
             onClick={() => meta?.onViewTransactions?.(row.original)}
           >
-            <MinusCircleIcon className="size-4 text-amber-600" />
+            <HistoryIcon className="size-4 text-amber-600" />
             <span className="sr-only">查看交易记录</span>
           </Button>
           <Button

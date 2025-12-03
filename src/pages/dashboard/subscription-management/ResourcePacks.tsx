@@ -3,6 +3,12 @@ import { toast } from 'sonner'
 
 import { ResourcePackDatatable } from '@/components/datatable/ResourcePackDatatable'
 import {
+  CreateResourcePackDialog,
+  EditResourcePackDialog,
+  ResourcePackDetailSheet,
+  AllocateResourcePackDialog,
+} from '@/components/resource-pack'
+import {
   getResourcePackList,
   deleteResourcePack,
   updateResourcePackStatus,
@@ -12,6 +18,13 @@ import type { AdminPackVO, ResourcePackListParams } from '@/types/subscription.t
 export default function ResourcePacks() {
   const [packs, setPacks] = useState<AdminPackVO[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Dialog states
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false)
+  const [allocateDialogOpen, setAllocateDialogOpen] = useState(false)
+  const [selectedPack, setSelectedPack] = useState<AdminPackVO | null>(null)
 
   const fetchPacks = useCallback(async () => {
     setLoading(true)
@@ -39,18 +52,18 @@ export default function ResourcePacks() {
   }, [fetchPacks])
 
   const handleView = (pack: AdminPackVO) => {
-    // TODO: Open detail sheet
-    toast.info(`查看扩容包: ${pack.packName}`)
+    setSelectedPack(pack)
+    setDetailSheetOpen(true)
   }
 
   const handleEdit = (pack: AdminPackVO) => {
-    // TODO: Open edit dialog
-    toast.info(`编辑扩容包: ${pack.packName}`)
+    setSelectedPack(pack)
+    setEditDialogOpen(true)
   }
 
   const handleAllocate = (pack: AdminPackVO) => {
-    // TODO: Open allocate dialog
-    toast.info(`分配扩容包: ${pack.packName}`)
+    setSelectedPack(pack)
+    setAllocateDialogOpen(true)
   }
 
   const handleDelete = async (pack: AdminPackVO) => {
@@ -87,8 +100,7 @@ export default function ResourcePacks() {
   }
 
   const handleCreate = () => {
-    // TODO: Open create dialog
-    toast.info('创建扩容包')
+    setCreateDialogOpen(true)
   }
 
   return (
@@ -106,6 +118,36 @@ export default function ResourcePacks() {
           onCreateClick={handleCreate}
         />
       </div>
+
+      {/* Create Resource Pack Dialog */}
+      <CreateResourcePackDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={fetchPacks}
+      />
+
+      {/* Edit Resource Pack Dialog */}
+      <EditResourcePackDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        pack={selectedPack}
+        onSuccess={fetchPacks}
+      />
+
+      {/* Resource Pack Detail Sheet */}
+      <ResourcePackDetailSheet
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
+        pack={selectedPack}
+      />
+
+      {/* Allocate Resource Pack Dialog */}
+      <AllocateResourcePackDialog
+        open={allocateDialogOpen}
+        onOpenChange={setAllocateDialogOpen}
+        pack={selectedPack}
+        onSuccess={fetchPacks}
+      />
     </div>
   )
 }

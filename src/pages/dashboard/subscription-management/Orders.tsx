@@ -1,10 +1,15 @@
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 
+import { ConfirmPaymentDialog } from '@/components/datatable/ConfirmPaymentDialog'
 import { OrderDatatable } from '@/components/datatable/OrderDatatable'
+import { OrderDetailSheet } from '@/components/datatable/OrderDetailSheet'
+import { RefundDialog } from '@/components/datatable/RefundDialog'
 import {
   getOrderList,
   cancelOrder,
+  refundOrder,
+  confirmPayment,
   exportOrders,
 } from '@/services/subscription'
 import type { AdminOrderVO, OrderListParams } from '@/types/subscription.types'
@@ -12,6 +17,18 @@ import type { AdminOrderVO, OrderListParams } from '@/types/subscription.types'
 export default function Orders() {
   const [orders, setOrders] = useState<AdminOrderVO[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Detail sheet state
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false)
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
+
+  // Refund dialog state
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false)
+  const [orderToRefund, setOrderToRefund] = useState<AdminOrderVO | null>(null)
+
+  // Confirm payment dialog state
+  const [confirmPaymentDialogOpen, setConfirmPaymentDialogOpen] = useState(false)
+  const [orderToConfirm, setOrderToConfirm] = useState<AdminOrderVO | null>(null)
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -39,8 +56,8 @@ export default function Orders() {
   }, [fetchOrders])
 
   const handleView = (order: AdminOrderVO) => {
-    // TODO: Open detail sheet
-    toast.info(`查看订单: ${order.orderNo}`)
+    setSelectedOrderId(order.id)
+    setDetailSheetOpen(true)
   }
 
   const handleCancel = async (order: AdminOrderVO) => {
@@ -59,13 +76,40 @@ export default function Orders() {
   }
 
   const handleRefund = (order: AdminOrderVO) => {
-    // TODO: Open refund dialog
-    toast.info(`退款订单: ${order.orderNo}`)
+    setOrderToRefund(order)
+    setRefundDialogOpen(true)
+  }
+
+  const handleRefundConfirm = async (orderId: number, refundAmount: number, reason?: string) => {
+    const response = await refundOrder(orderId, { refundAmount, reason })
+    if (response.data.code === 'SUCCESS') {
+      toast.success('退款成功')
+      fetchOrders()
+    } else {
+      toast.error(response.data.message || '退款失败')
+      throw new Error(response.data.message)
+    }
   }
 
   const handleConfirmPayment = (order: AdminOrderVO) => {
-    // TODO: Open confirm payment dialog
-    toast.info(`确认支付: ${order.orderNo}`)
+    setOrderToConfirm(order)
+    setConfirmPaymentDialogOpen(true)
+  }
+
+  const handleConfirmPaymentSubmit = async (
+    orderId: number,
+    payChannel: string,
+    transactionNo: string,
+    remark?: string
+  ) => {
+    const response = await confirmPayment(orderId, { payChannel, transactionNo, remark })
+    if (response.data.code === 'SUCCESS') {
+      toast.success('确认支付成功')
+      fetchOrders()
+    } else {
+      toast.error(response.data.message || '确认支付失败')
+      throw new Error(response.data.message)
+    }
   }
 
   const handleExport = async () => {
@@ -105,6 +149,29 @@ export default function Orders() {
           onRefresh={fetchOrders}
         />
       </div>
+
+      {/* Order Detail Sheet */}
+      <OrderDetailSheet
+        orderId={selectedOrderId}
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
+      />
+
+      {/* Refund Dialog */}
+      <RefundDialog
+        order={orderToRefund}
+        open={refundDialogOpen}
+        onOpenChange={setRefundDialogOpen}
+        onConfirm={handleRefundConfirm}
+      />
+
+      {/* Confirm Payment Dialog */}
+      <ConfirmPaymentDialog
+        order={orderToConfirm}
+        open={confirmPaymentDialogOpen}
+        onOpenChange={setConfirmPaymentDialogOpen}
+        onConfirm={handleConfirmPaymentSubmit}
+      />
     </div>
   )
 }

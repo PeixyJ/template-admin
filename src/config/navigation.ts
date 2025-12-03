@@ -1,4 +1,4 @@
-import { Users, Bell, CreditCard, type LucideIcon } from 'lucide-react'
+import { Users, Bell, CreditCard, LayoutDashboard, type LucideIcon } from 'lucide-react'
 
 /**
  * 导航子项类型
@@ -51,6 +51,11 @@ export interface NavigationConfig {
  * 主导航配置
  */
 export const navMainConfig: NavMainItem[] = [
+  {
+    title: '仪表盘',
+    url: '/dashboard',
+    icon: LayoutDashboard,
+  },
   {
     title: '团队管理',
     icon: Users,

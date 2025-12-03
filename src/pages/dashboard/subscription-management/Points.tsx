@@ -1,15 +1,37 @@
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 
+import { AdjustPointsDialog } from '@/components/datatable/AdjustPointsDialog'
 import { PointsAccountDatatable } from '@/components/datatable/PointsAccountDatatable'
+import { PointsAccountDetailSheet } from '@/components/datatable/PointsAccountDetailSheet'
+import { PointsTransactionsSheet } from '@/components/datatable/PointsTransactionsSheet'
+import { SetPointsExpiryDialog } from '@/components/datatable/SetPointsExpiryDialog'
 import {
   getPointsAccountList,
+  adjustPoints,
+  setPointsExpiry,
 } from '@/services/subscription'
 import type { PointsAccountVO, PointsAccountListParams } from '@/types/subscription.types'
 
 export default function Points() {
   const [accounts, setAccounts] = useState<PointsAccountVO[]>([])
   const [loading, setLoading] = useState(false)
+
+  // Detail sheet state
+  const [detailSheetOpen, setDetailSheetOpen] = useState(false)
+  const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null)
+
+  // Adjust dialog state
+  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false)
+  const [accountToAdjust, setAccountToAdjust] = useState<PointsAccountVO | null>(null)
+
+  // Transactions sheet state
+  const [transactionsSheetOpen, setTransactionsSheetOpen] = useState(false)
+  const [accountForTransactions, setAccountForTransactions] = useState<PointsAccountVO | null>(null)
+
+  // Set expiry dialog state
+  const [expiryDialogOpen, setExpiryDialogOpen] = useState(false)
+  const [accountForExpiry, setAccountForExpiry] = useState<PointsAccountVO | null>(null)
 
   const fetchAccounts = useCallback(async () => {
     setLoading(true)
@@ -37,23 +59,55 @@ export default function Points() {
   }, [fetchAccounts])
 
   const handleView = (account: PointsAccountVO) => {
-    // TODO: Open detail sheet
-    toast.info(`查看点数账户: ${account.teamName}`)
+    setSelectedTeamId(account.teamId)
+    setDetailSheetOpen(true)
   }
 
   const handleAdjust = (account: PointsAccountVO) => {
-    // TODO: Open adjust points dialog
-    toast.info(`调整点数: ${account.teamName}`)
+    setAccountToAdjust(account)
+    setAdjustDialogOpen(true)
+  }
+
+  const handleAdjustConfirm = async (
+    teamId: number,
+    points: number,
+    reason: string,
+    expireDays?: number
+  ) => {
+    const response = await adjustPoints({
+      teamId,
+      points,
+      reason,
+      expireDays,
+    })
+    if (response.data.code === 'SUCCESS') {
+      toast.success(points > 0 ? '点数增加成功' : '点数扣减成功')
+      fetchAccounts()
+    } else {
+      toast.error(response.data.message || '调整点数失败')
+      throw new Error(response.data.message)
+    }
   }
 
   const handleViewTransactions = (account: PointsAccountVO) => {
-    // TODO: Navigate to transactions page or open sheet
-    toast.info(`查看交易记录: ${account.teamName}`)
+    setAccountForTransactions(account)
+    setTransactionsSheetOpen(true)
   }
 
   const handleSetExpiry = (account: PointsAccountVO) => {
-    // TODO: Open set expiry dialog
-    toast.info(`设置过期时间: ${account.teamName}`)
+    setAccountForExpiry(account)
+    setExpiryDialogOpen(true)
+  }
+
+  const handleSetExpiryConfirm = async (teamId: number, expireDate: string) => {
+    const response = await setPointsExpiry(teamId, { expireDate })
+    if (response.data.code === 'SUCCESS') {
+      toast.success('设置过期时间成功')
+      fetchAccounts()
+    } else {
+      toast.error(response.data.message || '设置过期时间失败')
+      throw new Error(response.data.message)
+    }
   }
 
   return (
@@ -69,6 +123,36 @@ export default function Points() {
           onRefresh={fetchAccounts}
         />
       </div>
+
+      {/* Points Account Detail Sheet */}
+      <PointsAccountDetailSheet
+        teamId={selectedTeamId}
+        open={detailSheetOpen}
+        onOpenChange={setDetailSheetOpen}
+      />
+
+      {/* Adjust Points Dialog */}
+      <AdjustPointsDialog
+        account={accountToAdjust}
+        open={adjustDialogOpen}
+        onOpenChange={setAdjustDialogOpen}
+        onConfirm={handleAdjustConfirm}
+      />
+
+      {/* Points Transactions Sheet */}
+      <PointsTransactionsSheet
+        account={accountForTransactions}
+        open={transactionsSheetOpen}
+        onOpenChange={setTransactionsSheetOpen}
+      />
+
+      {/* Set Points Expiry Dialog */}
+      <SetPointsExpiryDialog
+        account={accountForExpiry}
+        open={expiryDialogOpen}
+        onOpenChange={setExpiryDialogOpen}
+        onConfirm={handleSetExpiryConfirm}
+      />
     </div>
   )
 }
