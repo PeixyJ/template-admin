@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "Tempalte-Admin - API 文档": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "apifox-mcp-server@latest",
+        "--project-id=7481951"
+      ],
+      "env": {
+        "APIFOX_ACCESS_TOKEN": "APS-gYpTz1vHLv0H2hHfb4jEPBWdZ9RM89cv"
+      }
+    }
+  }
+}

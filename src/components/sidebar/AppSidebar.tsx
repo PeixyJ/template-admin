@@ -1,5 +1,4 @@
 import * as React from 'react'
-import { Command } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { NavMain } from './NavMain'
@@ -54,11 +53,17 @@ export function AppSidebar({
             <SidebarMenuButton size="lg" asChild>
               <Link to="/dashboard">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                  <Command className="size-4" />
+                  <img
+                    src={import.meta.env.VITE_APP_ICON || '/favicon.svg'}
+                    alt="Logo"
+                    className="size-4"
+                  />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-semibold">Acme Inc</span>
-                  <span className="truncate text-xs">Enterprise</span>
+                  <span className="truncate font-semibold">
+                    {import.meta.env.VITE_APP_TITLE || 'Admin Template'}
+                  </span>
+                  <span className="truncate text-xs">管理后台</span>
                 </div>
               </Link>
             </SidebarMenuButton>

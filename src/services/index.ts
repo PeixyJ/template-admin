@@ -1,4 +1,6 @@
 export * from './api'
 export * from './auth'
 export * from './user'
+export * from './userAdmin'
 export * from './team'
+export * from './admin'
