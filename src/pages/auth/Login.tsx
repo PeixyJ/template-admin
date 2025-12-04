@@ -1,10 +1,35 @@
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Logo } from '@/components/common'
 import { LoginForm } from '@/features/auth'
 import { MotionPreset } from '@/components/ui/motion-preset'
 import { Magnetic } from '@/components/ui/magnet-effect'
 import { StarsBackground } from '@/components/ui/background-stars'
+import { isLogin } from '@/services/auth'
 
 export default function LoginPage() {
+  const navigate = useNavigate()
+  const [checking, setChecking] = useState(true)
+
+  useEffect(() => {
+    isLogin()
+      .then((res) => {
+        if (res.data?.code === 'SUCCESS') {
+          navigate('/dashboard', { replace: true })
+        }
+      })
+      .catch(() => {
+        // 未登录，忽略错误
+      })
+      .finally(() => {
+        setChecking(false)
+      })
+  }, [navigate])
+
+  if (checking) {
+    return null
+  }
+
   return (
     <div className='grid min-h-svh lg:grid-cols-2'>
       <div className='flex flex-col gap-4 p-6 md:p-10'>

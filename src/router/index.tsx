@@ -10,13 +10,6 @@ import {
   UsersPage,
   AdminsPage,
   NotificationTemplatesPage,
-  PlansPage,
-  SubscriptionsPage,
-  FeaturesPage,
-  OrdersPage,
-  PointsPage,
-  ResourcePacksPage,
-  GrantsPage,
 } from '@/pages'
 import { DashboardLayout } from '@/layouts'
 
@@ -65,34 +58,6 @@ export const router = createBrowserRouter([
       {
         path: 'notification-management/templates',
         element: <NotificationTemplatesPage />,
-      },
-      {
-        path: 'subscription-management/plans',
-        element: <PlansPage />,
-      },
-      {
-        path: 'subscription-management/subscriptions',
-        element: <SubscriptionsPage />,
-      },
-      {
-        path: 'subscription-management/features',
-        element: <FeaturesPage />,
-      },
-      {
-        path: 'subscription-management/orders',
-        element: <OrdersPage />,
-      },
-      {
-        path: 'subscription-management/points',
-        element: <PointsPage />,
-      },
-      {
-        path: 'subscription-management/resource-packs',
-        element: <ResourcePacksPage />,
-      },
-      {
-        path: 'subscription-management/grants',
-        element: <GrantsPage />,
       },
     ],
   },
