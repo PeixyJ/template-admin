@@ -19,8 +19,9 @@ import type {
   SubscriptionListParams,
   SubscriptionListResponse,
   SubscriptionDetailResponse,
-  AdminCreateSubscriptionDTO,
+  AdminGrantSubscriptionDTO,
   AdminUpdateSubscriptionDTO,
+  ExtendSubscriptionDTO,
   // Points
   PointsAccountListParams,
   PointsAccountListResponse,
@@ -169,9 +170,9 @@ export async function getSubscriptionDetail(subscriptionId: number): Promise<Sub
   return response.data
 }
 
-/** 为团队创建订阅（管理员赠送） */
-export async function createSubscription(data: AdminCreateSubscriptionDTO): Promise<ApiResult<number>> {
-  const response = await api.post(`${BASE_URL}/subscriptions`, data)
+/** 管理员赠送订阅 */
+export async function adminGrantSubscription(data: AdminGrantSubscriptionDTO): Promise<ApiResult<number>> {
+  const response = await api.post(`${BASE_URL}/subscriptions/grant`, data)
   return response.data
 }
 
@@ -200,8 +201,8 @@ export async function resumeSubscription(subscriptionId: number): Promise<ApiRes
 }
 
 /** 延长订阅有效期 */
-export async function extendSubscription(subscriptionId: number, days: number): Promise<ApiResult<void>> {
-  const response = await api.post(`${BASE_URL}/subscriptions/${subscriptionId}/extend`, null, { params: { days } })
+export async function extendSubscription(subscriptionId: number, data: ExtendSubscriptionDTO): Promise<ApiResult<void>> {
+  const response = await api.post(`${BASE_URL}/subscriptions/${subscriptionId}/extend`, data)
   return response.data
 }
 

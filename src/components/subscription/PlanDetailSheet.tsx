@@ -67,13 +67,9 @@ export function PlanDetailSheet({
     }
   }
 
-  const parseResourceLimits = (resourceLimits: string | null) => {
+  const parseResourceLimits = (resourceLimits: Record<string, number> | null) => {
     if (!resourceLimits) return null
-    try {
-      return JSON.parse(resourceLimits) as Record<string, number>
-    } catch {
-      return null
-    }
+    return resourceLimits
   }
 
   const resourceTypeLabels: Record<string, string> = {

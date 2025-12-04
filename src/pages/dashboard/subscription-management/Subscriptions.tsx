@@ -1,16 +1,17 @@
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
+import { GiftIcon } from 'lucide-react'
 
+import { Button } from '@/components/ui/button'
 import { SubscriptionDatatable } from '@/components/subscription/SubscriptionDatatable'
 import { SubscriptionDetailSheet } from '@/components/subscription/SubscriptionDetailSheet'
-import { EditSubscriptionDialog } from '@/components/subscription/EditSubscriptionDialog'
 import { ExtendSubscriptionDialog } from '@/components/subscription/ExtendSubscriptionDialog'
+import { GrantSubscriptionDialog } from '@/components/subscription/GrantSubscriptionDialog'
+import { CancelSubscriptionDialog } from '@/components/subscription/CancelSubscriptionDialog'
 
 import {
   getSubscriptionList,
   cancelSubscription,
-  pauseSubscription,
-  resumeSubscription,
 } from '@/services/subscription'
 import type { SubscriptionVO, SubscriptionListParams } from '@/types/subscription.types'
 
@@ -19,10 +20,11 @@ export default function Subscriptions() {
   const [loading, setLoading] = useState(false)
   const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<number | null>(null)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
-  const [editSubscription, setEditSubscription] = useState<SubscriptionVO | null>(null)
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [extendSubscription, setExtendSubscription] = useState<SubscriptionVO | null>(null)
   const [extendDialogOpen, setExtendDialogOpen] = useState(false)
+  const [grantDialogOpen, setGrantDialogOpen] = useState(false)
+  const [subscriptionToCancel, setSubscriptionToCancel] = useState<SubscriptionVO | null>(null)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
 
   const fetchSubscriptions = useCallback(async () => {
     setLoading(true)
@@ -54,17 +56,14 @@ export default function Subscriptions() {
     setDetailSheetOpen(true)
   }
 
-  const handleEdit = (subscription: SubscriptionVO) => {
-    setEditSubscription(subscription)
-    setEditDialogOpen(true)
+  const handleCancel = (subscription: SubscriptionVO) => {
+    setSubscriptionToCancel(subscription)
+    setCancelDialogOpen(true)
   }
 
-  const handleCancel = async (subscription: SubscriptionVO) => {
-    const reason = prompt('请输入取消原因（可选）:')
-    if (reason === null) return // User clicked cancel
-
+  const handleConfirmCancel = async (subscriptionId: number, reason?: string) => {
     try {
-      const response = await cancelSubscription(subscription.id, reason || undefined)
+      const response = await cancelSubscription(subscriptionId, reason)
       if (response.code === 'SUCCESS') {
         toast.success('订阅已取消')
         fetchSubscriptions()
@@ -74,44 +73,6 @@ export default function Subscriptions() {
     } catch (error) {
       console.error('Failed to cancel subscription:', error)
       toast.error('取消订阅失败')
-    }
-  }
-
-  const handlePause = async (subscription: SubscriptionVO) => {
-    if (!confirm(`确定要暂停订阅 "${subscription.subscriptionNo}" 吗？`)) {
-      return
-    }
-
-    try {
-      const response = await pauseSubscription(subscription.id)
-      if (response.code === 'SUCCESS') {
-        toast.success('订阅已暂停')
-        fetchSubscriptions()
-      } else {
-        toast.error(response.message || '暂停订阅失败')
-      }
-    } catch (error) {
-      console.error('Failed to pause subscription:', error)
-      toast.error('暂停订阅失败')
-    }
-  }
-
-  const handleResume = async (subscription: SubscriptionVO) => {
-    if (!confirm(`确定要恢复订阅 "${subscription.subscriptionNo}" 吗？`)) {
-      return
-    }
-
-    try {
-      const response = await resumeSubscription(subscription.id)
-      if (response.code === 'SUCCESS') {
-        toast.success('订阅已恢复')
-        fetchSubscriptions()
-      } else {
-        toast.error(response.message || '恢复订阅失败')
-      }
-    } catch (error) {
-      console.error('Failed to resume subscription:', error)
-      toast.error('恢复订阅失败')
     }
   }
 
@@ -127,6 +88,10 @@ export default function Subscriptions() {
           <h1 className="text-2xl font-semibold">订阅管理</h1>
           <p className="text-muted-foreground">查看和管理用户订阅</p>
         </div>
+        <Button onClick={() => setGrantDialogOpen(true)}>
+          <GiftIcon className="mr-2 size-4" />
+          赠送订阅
+        </Button>
       </div>
 
       <div className="rounded-xl bg-card">
@@ -134,11 +99,9 @@ export default function Subscriptions() {
           data={subscriptions}
           loading={loading}
           onRowClick={handleRowClick}
-          onEdit={handleEdit}
           onCancel={handleCancel}
-          onPause={handlePause}
-          onResume={handleResume}
           onExtend={handleExtend}
+          onRefresh={fetchSubscriptions}
         />
       </div>
 
@@ -148,18 +111,24 @@ export default function Subscriptions() {
         onOpenChange={setDetailSheetOpen}
       />
 
-      <EditSubscriptionDialog
-        subscription={editSubscription}
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        onSuccess={fetchSubscriptions}
-      />
-
       <ExtendSubscriptionDialog
         subscription={extendSubscription}
         open={extendDialogOpen}
         onOpenChange={setExtendDialogOpen}
         onSuccess={fetchSubscriptions}
+      />
+
+      <GrantSubscriptionDialog
+        open={grantDialogOpen}
+        onOpenChange={setGrantDialogOpen}
+        onSuccess={fetchSubscriptions}
+      />
+
+      <CancelSubscriptionDialog
+        subscription={subscriptionToCancel}
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        onConfirm={handleConfirmCancel}
       />
     </div>
   )

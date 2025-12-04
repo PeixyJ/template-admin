@@ -3,11 +3,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Loader2Icon,
-  PauseIcon,
-  PlayIcon,
   XIcon,
   CalendarPlusIcon,
-  PencilIcon,
+  RefreshCwIcon,
 } from 'lucide-react'
 
 import type {
@@ -50,6 +48,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 import { usePagination } from '@/hooks/use-pagination'
 import { cn } from '@/lib/utils'
@@ -58,12 +57,10 @@ import type { SubscriptionVO, SubscriptionStatus, SubscriptionSource } from '@/t
 interface SubscriptionDatatableProps {
   data: SubscriptionVO[]
   loading?: boolean
-  onEdit?: (subscription: SubscriptionVO) => void
   onCancel?: (subscription: SubscriptionVO) => void
-  onPause?: (subscription: SubscriptionVO) => void
-  onResume?: (subscription: SubscriptionVO) => void
   onExtend?: (subscription: SubscriptionVO) => void
   onRowClick?: (subscription: SubscriptionVO) => void
+  onRefresh?: () => void
 }
 
 const statusLabels: Record<SubscriptionStatus, string> = {
@@ -161,6 +158,7 @@ const columns: ColumnDef<SubscriptionVO>[] = [
     accessorKey: 'status',
     cell: ({ row }) => {
       const status = row.getValue('status') as SubscriptionStatus
+
       return (
         <span
           className={cn(
@@ -205,20 +203,72 @@ const columns: ColumnDef<SubscriptionVO>[] = [
     ),
   },
   {
+    header: '赠送人',
+    accessorKey: 'granterName',
+    cell: ({ row }) => {
+      const { granterName, granterAvatar, source } = row.original
+
+      if (source !== 'GRANT' || !granterName) {
+        return <span className="text-muted-foreground">-</span>
+      }
+
+      return (
+        <div className="flex items-center gap-2">
+          <Avatar className="size-6">
+            <AvatarImage src={granterAvatar || undefined} alt={granterName} />
+            <AvatarFallback className="text-xs">
+              {granterName.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm">{granterName}</span>
+        </div>
+      )
+    },
+  },
+  {
+    header: '赠送原因',
+    accessorKey: 'grantReason',
+    cell: ({ row }) => {
+      const { grantReason, source } = row.original
+
+      if (source !== 'GRANT') {
+        return <span className="text-muted-foreground">-</span>
+      }
+
+      if (!grantReason) {
+        return <span className="text-muted-foreground">未填写</span>
+      }
+
+      return (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="max-w-[120px] truncate text-sm cursor-default">
+                {grantReason}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[300px]">
+              {grantReason}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )
+    },
+  },
+  {
     id: 'actions',
     header: '操作',
     cell: ({ row, table }) => {
       const meta = table.options.meta as {
-        onEdit?: (subscription: SubscriptionVO) => void
         onCancel?: (subscription: SubscriptionVO) => void
-        onPause?: (subscription: SubscriptionVO) => void
-        onResume?: (subscription: SubscriptionVO) => void
         onExtend?: (subscription: SubscriptionVO) => void
       }
       const subscription = row.original
       const isActive = subscription.status === 'ACTIVE'
       const isPaused = subscription.status === 'PAUSED'
       const canOperate = isActive || isPaused
+
+      if (!canOperate) return null
 
       return (
         <TooltipProvider>
@@ -229,82 +279,29 @@ const columns: ColumnDef<SubscriptionVO>[] = [
                   variant="ghost"
                   size="icon"
                   className="size-8"
-                  onClick={() => meta?.onEdit?.(subscription)}
-                  title="编辑"
+                  onClick={() => meta?.onExtend?.(subscription)}
+                  title="延期"
                 >
-                  <PencilIcon className="size-4" />
+                  <CalendarPlusIcon className="size-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>编辑</TooltipContent>
+              <TooltipContent>延期</TooltipContent>
             </Tooltip>
 
-            {isActive && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={() => meta?.onPause?.(subscription)}
-                    title="暂停"
-                  >
-                    <PauseIcon className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>暂停</TooltipContent>
-              </Tooltip>
-            )}
-
-            {isPaused && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-8"
-                    onClick={() => meta?.onResume?.(subscription)}
-                    title="恢复"
-                  >
-                    <PlayIcon className="size-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>恢复</TooltipContent>
-              </Tooltip>
-            )}
-
-            {canOperate && (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8"
-                      onClick={() => meta?.onExtend?.(subscription)}
-                      title="延期"
-                    >
-                      <CalendarPlusIcon className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>延期</TooltipContent>
-                </Tooltip>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 text-destructive hover:text-destructive"
-                      onClick={() => meta?.onCancel?.(subscription)}
-                      title="取消"
-                    >
-                      <XIcon className="size-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>取消订阅</TooltipContent>
-                </Tooltip>
-              </>
-            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-destructive hover:text-destructive"
+                  onClick={() => meta?.onCancel?.(subscription)}
+                  title="取消"
+                >
+                  <XIcon className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>取消订阅</TooltipContent>
+            </Tooltip>
           </div>
         </TooltipProvider>
       )
@@ -315,12 +312,10 @@ const columns: ColumnDef<SubscriptionVO>[] = [
 export function SubscriptionDatatable({
   data,
   loading,
-  onEdit,
   onCancel,
-  onPause,
-  onResume,
   onExtend,
   onRowClick,
+  onRefresh,
 }: SubscriptionDatatableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const pageSize = 10
@@ -338,10 +333,7 @@ export function SubscriptionDatatable({
       pagination,
     },
     meta: {
-      onEdit,
       onCancel,
-      onPause,
-      onResume,
       onExtend,
       onRowClick,
     },
@@ -364,7 +356,7 @@ export function SubscriptionDatatable({
       <div className="border-b">
         <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-6 py-3">
           <span className="font-medium">订阅列表</span>
-          <Filter column={table.getColumn('teamName')!} />
+          <Filter column={table.getColumn('teamName')!} onRefresh={onRefresh} loading={loading} />
         </div>
         <Table>
           <TableHeader>
@@ -522,12 +514,20 @@ export function SubscriptionDatatable({
   )
 }
 
-function Filter({ column }: { column: Column<SubscriptionVO, unknown> }) {
+function Filter({
+  column,
+  onRefresh,
+  loading,
+}: {
+  column: Column<SubscriptionVO, unknown>
+  onRefresh?: () => void
+  loading?: boolean
+}) {
   const id = useId()
   const columnFilterValue = column.getFilterValue()
 
   return (
-    <div>
+    <div className="flex items-center gap-2">
       <Label htmlFor={`${id}-input`} className="sr-only">
         搜索订阅
       </Label>
@@ -539,6 +539,15 @@ function Filter({ column }: { column: Column<SubscriptionVO, unknown> }) {
         type="text"
         className="w-[200px]"
       />
+      <Button
+        variant="outline"
+        size="icon"
+        onClick={onRefresh}
+        disabled={loading}
+        title="刷新"
+      >
+        <RefreshCwIcon className={cn('size-4', loading && 'animate-spin')} />
+      </Button>
     </div>
   )
 }

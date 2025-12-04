@@ -95,9 +95,9 @@ export function SubscriptionDetailSheet({
               </h3>
               <div className="grid gap-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">订阅编号</span>
+                  <span className="text-muted-foreground">订阅 ID</span>
                   <code className="rounded bg-muted px-2 py-1 text-sm">
-                    {subscription.subscriptionNo}
+                    #{subscription.id}
                   </code>
                 </div>
                 <div className="flex items-center justify-between">
@@ -142,8 +142,8 @@ export function SubscriptionDetailSheet({
                   </code>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">计划等级</span>
-                  <Badge>Lv.{subscription.planLevel}</Badge>
+                  <span className="text-muted-foreground">席位数</span>
+                  <Badge>{subscription.seats}</Badge>
                 </div>
               </div>
             </section>
@@ -157,13 +157,13 @@ export function SubscriptionDetailSheet({
               <div className="grid gap-3">
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">开始日期</span>
-                  <span>{new Date(subscription.startDate).toLocaleDateString('zh-CN')}</span>
+                  <span>{new Date(subscription.startTime).toLocaleDateString('zh-CN')}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">结束日期</span>
                   <span>
-                    {subscription.endDate
-                      ? new Date(subscription.endDate).toLocaleDateString('zh-CN')
+                    {subscription.endTime
+                      ? new Date(subscription.endTime).toLocaleDateString('zh-CN')
                       : '永久'}
                   </span>
                 </div>
@@ -188,46 +188,27 @@ export function SubscriptionDetailSheet({
               </div>
             </section>
 
-            {/* 费用信息 */}
-            <section className="space-y-4 border-t pt-4">
-              <h3 className="flex items-center gap-2 font-medium">
-                <CreditCardIcon className="size-4" />
-                费用信息
-              </h3>
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">原价</span>
-                  <span>¥{subscription.price.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">实付金额</span>
-                  <span className="font-medium text-lg">¥{subscription.paidAmount.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">席位数</span>
-                  <span>{subscription.seats}</span>
-                </div>
-              </div>
-            </section>
-
             {/* 关联信息 */}
-            {(subscription.orderNo || subscription.grantNo) && (
+            {(subscription.orderId || subscription.grantId) && (
               <section className="space-y-4 border-t pt-4">
-                <h3 className="font-medium">关联信息</h3>
+                <h3 className="flex items-center gap-2 font-medium">
+                  <CreditCardIcon className="size-4" />
+                  关联信息
+                </h3>
                 <div className="grid gap-3">
-                  {subscription.orderNo && (
+                  {subscription.orderId && (
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">关联订单</span>
+                      <span className="text-muted-foreground">关联订单 ID</span>
                       <code className="rounded bg-muted px-2 py-1 text-sm">
-                        {subscription.orderNo}
+                        #{subscription.orderId}
                       </code>
                     </div>
                   )}
-                  {subscription.grantNo && (
+                  {subscription.grantId && (
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">赠送单号</span>
+                      <span className="text-muted-foreground">赠送记录 ID</span>
                       <code className="rounded bg-muted px-2 py-1 text-sm">
-                        {subscription.grantNo}
+                        #{subscription.grantId}
                       </code>
                     </div>
                   )}

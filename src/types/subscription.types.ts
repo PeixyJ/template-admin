@@ -232,6 +232,8 @@ export interface SubscriptionVO {
   endTime: string | null
   seats: number
   grantUserId: number | null
+  granterName: string | null
+  granterAvatar: string | null
   grantReason: string | null
   createTime: string
 }
@@ -258,14 +260,9 @@ export interface SubscriptionDetailVO extends SubscriptionVO {
   features: SubscriptionFeatureVO[]
 }
 
-/** 创建订阅参数（管理员赠送） */
-export interface AdminCreateSubscriptionDTO {
-  teamId: number
-  planId: number
-  durationDays?: number
-  seats?: number
-  effectiveType?: 'IMMEDIATE' | 'SCHEDULED'
-  effectiveDate?: string
+/** 延长订阅参数 */
+export interface ExtendSubscriptionDTO {
+  days: number
   reason?: string
 }
 
@@ -563,7 +560,17 @@ export interface GrantRecordDetailVO extends GrantRecordVO {
   updateTime: string
 }
 
-/** 赠送订阅参数 */
+/** 赠送订阅参数（新API） */
+export interface AdminGrantSubscriptionDTO {
+  teamId: number
+  planId: number
+  durationDays: number
+  reason?: string
+  seats?: number
+  grantUserId?: number
+}
+
+/** 赠送订阅参数（赠送记录） */
 export interface GrantSubscriptionDTO {
   teamId: number
   planId: number

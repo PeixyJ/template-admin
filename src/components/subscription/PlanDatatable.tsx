@@ -55,7 +55,7 @@ import { Switch } from '@/components/ui/switch'
 
 import { usePagination } from '@/hooks/use-pagination'
 import { cn } from '@/lib/utils'
-import type { PlanVO, PlanType, ApplyScope, PlanListParams } from '@/types/subscription.types'
+import type { PlanVO, PlanType, ApplyScope } from '@/types/subscription.types'
 
 export interface PlanFilters {
   keyword?: string

@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { NumberInput } from '@/components/ui/number-input'
 
 import { extendSubscription } from '@/services/subscription'
 import type { SubscriptionVO } from '@/types/subscription.types'
@@ -31,6 +33,7 @@ export function ExtendSubscriptionDialog({
   onSuccess,
 }: ExtendSubscriptionDialogProps) {
   const [days, setDays] = useState<number>(30)
+  const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,11 +43,16 @@ export function ExtendSubscriptionDialog({
     setLoading(true)
 
     try {
-      const response = await extendSubscription(subscription.id, days)
+      const response = await extendSubscription(subscription.id, {
+        days,
+        reason: reason.trim() || undefined,
+      })
       if (response.code === 'SUCCESS') {
         toast.success(`订阅已延长 ${days} 天`)
         onSuccess()
         onOpenChange(false)
+        setDays(30)
+        setReason('')
       } else {
         toast.error(response.message || '延长订阅失败')
       }
@@ -64,7 +72,7 @@ export function ExtendSubscriptionDialog({
         <DialogHeader>
           <DialogTitle>延长订阅</DialogTitle>
           <DialogDescription>
-            为订阅 "{subscription.subscriptionNo}" 延长有效期
+            为订阅 #{subscription.id}（{subscription.planName}）延长有效期
           </DialogDescription>
         </DialogHeader>
 
@@ -73,23 +81,29 @@ export function ExtendSubscriptionDialog({
             <Label>当前到期日期</Label>
             <Input
               value={
-                subscription.endDate
-                  ? new Date(subscription.endDate).toLocaleDateString('zh-CN')
+                subscription.endTime
+                  ? new Date(subscription.endTime).toLocaleDateString('zh-CN')
                   : '永久'
               }
               disabled
             />
           </div>
 
+          <NumberInput
+            label="延长天数 *"
+            value={days}
+            onChange={setDays}
+            minValue={1}
+          />
+
           <div className="space-y-2">
-            <Label htmlFor="days">延长天数 *</Label>
-            <Input
-              id="days"
-              type="number"
-              min={1}
-              value={days}
-              onChange={(e) => setDays(parseInt(e.target.value) || 0)}
-              required
+            <Label htmlFor="reason">延长原因</Label>
+            <Textarea
+              id="reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="请输入延长原因（可选）..."
+              rows={3}
             />
           </div>
 
