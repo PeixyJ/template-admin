@@ -1,4 +1,4 @@
-import { Users, Bell, LayoutDashboard, type LucideIcon } from 'lucide-react'
+import { Users, Bell, LayoutDashboard, CreditCard, type LucideIcon } from 'lucide-react'
 
 /**
  * 导航子项类型
@@ -70,6 +70,19 @@ export const navMainConfig: NavMainItem[] = [
     icon: Bell,
     items: [
       { title: '通知模板', url: '/dashboard/notification-management/templates' },
+    ],
+  },
+  {
+    title: '订阅管理',
+    icon: CreditCard,
+    items: [
+      { title: '计划管理', url: '/dashboard/subscription-management/plans' },
+      { title: '功能管理', url: '/dashboard/subscription-management/features' },
+      { title: '订阅列表', url: '/dashboard/subscription-management/subscriptions' },
+      { title: '点数管理', url: '/dashboard/subscription-management/points' },
+      { title: '订单管理', url: '/dashboard/subscription-management/orders' },
+      { title: '扩容包', url: '/dashboard/subscription-management/resource-packs' },
+      { title: '赠送记录', url: '/dashboard/subscription-management/grants' },
     ],
   },
 ]

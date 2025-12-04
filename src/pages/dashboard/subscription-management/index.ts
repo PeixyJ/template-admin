@@ -1,0 +1,7 @@
+export { default as PlansPage } from './Plans'
+export { default as FeaturesPage } from './Features'
+export { default as SubscriptionsPage } from './Subscriptions'
+export { default as PointsPage } from './Points'
+export { default as OrdersPage } from './Orders'
+export { default as ResourcePacksPage } from './ResourcePacks'
+export { default as GrantsPage } from './Grants'
