@@ -3,7 +3,7 @@ import { toast } from 'sonner'
 import { PlusIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
-import { FeatureDatatable } from '@/components/subscription/FeatureDatatable'
+import { FeatureDatatable, type FeatureFilters } from '@/components/subscription/FeatureDatatable'
 import { FeatureDetailSheet } from '@/components/subscription/FeatureDetailSheet'
 import { CreateFeatureDialog } from '@/components/subscription/CreateFeatureDialog'
 import { EditFeatureDialog } from '@/components/subscription/EditFeatureDialog'
@@ -19,6 +19,10 @@ import type { FeatureVO, FeatureListParams, CreateFeatureDTO, UpdateFeatureDTO }
 export default function Features() {
   const [features, setFeatures] = useState<FeatureVO[]>([])
   const [loading, setLoading] = useState(false)
+  const [filters, setFilters] = useState<FeatureFilters>({
+    keyword: '',
+    featureType: '',
+  })
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null)
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
@@ -31,6 +35,8 @@ export default function Features() {
       const params: FeatureListParams = {
         page: 1,
         size: 100,
+        ...(filters.keyword && { name: filters.keyword }),
+        ...(filters.featureType && { featureType: filters.featureType }),
       }
       const response = await getFeatureList(params)
       if (response.code === 'SUCCESS') {
@@ -44,7 +50,7 @@ export default function Features() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filters])
 
   useEffect(() => {
     fetchFeatures()
@@ -132,6 +138,9 @@ export default function Features() {
         <FeatureDatatable
           data={features}
           loading={loading}
+          filters={filters}
+          onFiltersChange={setFilters}
+          onRefresh={fetchFeatures}
           onRowClick={handleRowClick}
           onEdit={handleEdit}
           onDelete={handleDelete}

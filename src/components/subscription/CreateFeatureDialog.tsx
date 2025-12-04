@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { NumberInputWithButtons } from '@/components/shadcn-studio/input/input-40'
 
 import type { CreateFeatureDTO, FeatureType } from '@/types/subscription.types'
 
@@ -117,14 +118,12 @@ export function CreateFeatureDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sortOrder">排序</Label>
-              <Input
-                id="sortOrder"
-                type="number"
-                min={0}
+              <NumberInputWithButtons
+                label="排序"
+                minValue={0}
                 value={formData.sortOrder}
-                onChange={(e) =>
-                  setFormData({ ...formData, sortOrder: parseInt(e.target.value) || 0 })
+                onChange={(value) =>
+                  setFormData({ ...formData, sortOrder: value })
                 }
               />
             </div>
@@ -132,19 +131,16 @@ export function CreateFeatureDialog({
 
           {formData.featureType === 'POINTS' && (
             <div className="space-y-2">
-              <Label htmlFor="pointsCost">点数消耗（每次）</Label>
-              <Input
-                id="pointsCost"
-                type="number"
-                min={0}
-                value={formData.pointsCost || ''}
-                onChange={(e) =>
+              <NumberInputWithButtons
+                label="点数消耗（每次）"
+                minValue={0}
+                value={formData.pointsCost ?? 0}
+                onChange={(value) =>
                   setFormData({
                     ...formData,
-                    pointsCost: e.target.value ? parseInt(e.target.value) : undefined,
+                    pointsCost: value,
                   })
                 }
-                placeholder="每次使用消耗的点数"
               />
             </div>
           )}

@@ -641,6 +641,7 @@ export interface FeatureListParams {
   size: number
   name?: string
   code?: string
+  featureType?: FeatureType
   status?: boolean
 }
 

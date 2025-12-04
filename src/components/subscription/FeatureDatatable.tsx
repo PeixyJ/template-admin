@@ -1,14 +1,14 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Loader2Icon,
   PencilIcon,
+  RefreshCwIcon,
   Trash2Icon,
 } from 'lucide-react'
 
 import type {
-  Column,
   ColumnDef,
   ColumnFiltersState,
   PaginationState,
@@ -25,14 +25,19 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
   PaginationItem,
 } from '@/components/ui/pagination'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -47,9 +52,17 @@ import { usePagination } from '@/hooks/use-pagination'
 import { cn } from '@/lib/utils'
 import type { FeatureVO, FeatureType } from '@/types/subscription.types'
 
+export interface FeatureFilters {
+  keyword: string
+  featureType: FeatureType | ''
+}
+
 interface FeatureDatatableProps {
   data: FeatureVO[]
   loading?: boolean
+  filters: FeatureFilters
+  onFiltersChange: (filters: FeatureFilters) => void
+  onRefresh: () => void
   onEdit?: (feature: FeatureVO) => void
   onDelete?: (feature: FeatureVO) => void
   onStatusChange?: (feature: FeatureVO, status: boolean) => void
@@ -216,6 +229,9 @@ const columns: ColumnDef<FeatureVO>[] = [
 export function FeatureDatatable({
   data,
   loading,
+  filters,
+  onFiltersChange,
+  onRefresh,
   onEdit,
   onDelete,
   onStatusChange,
@@ -260,8 +276,36 @@ export function FeatureDatatable({
     <div className="w-full">
       <div className="border-b">
         <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-6 py-3">
-          <span className="font-medium">功能列表</span>
-          <Filter column={table.getColumn('featureName')!} />
+          <div className="flex items-center gap-3">
+            <Select
+              value={filters.featureType || 'ALL'}
+              onValueChange={(value) =>
+                onFiltersChange({
+                  ...filters,
+                  featureType: value === 'ALL' ? '' : (value as FeatureType),
+                })
+              }
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="全部类型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">全部类型</SelectItem>
+                <SelectItem value="BOOLEAN">开关型</SelectItem>
+                <SelectItem value="POINTS">点数型</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onRefresh}
+              disabled={loading}
+            >
+              <RefreshCwIcon className={loading ? 'size-4 animate-spin' : 'size-4'} />
+            </Button>
+          </div>
         </div>
         <Table>
           <TableHeader>
@@ -415,27 +459,6 @@ export function FeatureDatatable({
           </Pagination>
         </div>
       </div>
-    </div>
-  )
-}
-
-function Filter({ column }: { column: Column<FeatureVO, unknown> }) {
-  const id = useId()
-  const columnFilterValue = column.getFilterValue()
-
-  return (
-    <div>
-      <Label htmlFor={`${id}-input`} className="sr-only">
-        搜索功能
-      </Label>
-      <Input
-        id={`${id}-input`}
-        value={(columnFilterValue ?? '') as string}
-        onChange={(e) => column.setFilterValue(e.target.value)}
-        placeholder="搜索功能名称..."
-        type="text"
-        className="w-[200px]"
-      />
     </div>
   )
 }
