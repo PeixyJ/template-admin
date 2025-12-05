@@ -109,6 +109,24 @@ pnpm preview  # 预览生产构建
 2. 使用 CVA 定义变体
 3. 使用 `cn()` 合并类名
 
+### 数值输入组件
+- 需要调整数量大小的输入框，统一使用带加减按钮的数值输入组件
+- 组件路径: `@/components/shadcn-studio/input/input-40`
+- 基于 React Aria Components 构建
+- 示例:
+```typescript
+import { NumberInputWithButtons } from '@/components/shadcn-studio/input/input-40'
+
+<NumberInputWithButtons
+  label="调整数量"
+  value={points}
+  onChange={setPoints}
+  minValue={-1000}
+  maxValue={1000}
+  step={10}
+/>
+```
+
 ## 环境变量
 ```
 VITE_API_BASE_URL=http://localhost:3000/api

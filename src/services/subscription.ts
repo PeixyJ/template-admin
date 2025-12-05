@@ -31,7 +31,10 @@ import type {
   AdjustPointsDTO,
   AdjustPointsResponse,
   BatchAdjustPointsDTO,
+  BatchAdjustPointsResponse,
   SetPointsExpiryDTO,
+  FreezePointsDTO,
+  FreezePointsResponse,
   // Order
   OrderListParams,
   OrderListResponse,
@@ -233,14 +236,36 @@ export async function adjustPoints(data: AdjustPointsDTO): Promise<AdjustPointsR
 }
 
 /** 批量调整团队点数 */
-export async function batchAdjustPoints(data: BatchAdjustPointsDTO): Promise<ApiResult<void>> {
+export async function batchAdjustPoints(data: BatchAdjustPointsDTO): Promise<BatchAdjustPointsResponse> {
   const response = await api.post(`${BASE_URL}/points/batch-adjust`, data)
   return response.data
 }
 
-/** 设置点数过期时间 */
+/** 设置点数过期时间（旧API，保留兼容） */
 export async function setPointsExpiry(teamId: number, data: SetPointsExpiryDTO): Promise<ApiResult<void>> {
   const response = await api.post(`${BASE_URL}/points/team/${teamId}/expiry`, data)
+  return response.data
+}
+
+/** 设置批次过期时间，空字符串表示永久有效 */
+export async function setBatchExpiry(batchId: number, expireTime?: string): Promise<ApiResult<void>> {
+  const response = await api.put(
+    `${BASE_URL}/points/batches/${batchId}/expire`,
+    null,
+    expireTime ? { params: { expireTime } } : undefined
+  )
+  return response.data
+}
+
+/** 冻结点数 */
+export async function freezePoints(data: FreezePointsDTO): Promise<FreezePointsResponse> {
+  const response = await api.post(`${BASE_URL}/points/freeze`, data)
+  return response.data
+}
+
+/** 解冻点数 */
+export async function unfreezePoints(data: FreezePointsDTO): Promise<FreezePointsResponse> {
+  const response = await api.post(`${BASE_URL}/points/unfreeze`, data)
   return response.data
 }
 

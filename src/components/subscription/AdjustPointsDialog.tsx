@@ -14,9 +14,46 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { NumberInputWithButtons } from '@/components/shadcn-studio/input/input-40'
 
-import { adjustPoints } from '@/services/subscription'
+import { adjustPoints, freezePoints, unfreezePoints } from '@/services/subscription'
 import type { PointsAccountVO, AdjustPointsDTO } from '@/types/subscription.types'
+
+type OperationType = 'adjust' | 'freeze' | 'unfreeze'
+
+const operationConfig = {
+  adjust: {
+    title: '调整点数',
+    description: (teamName: string) => `为团队 "${teamName}" 调整点数（正数增加，负数扣减）`,
+    pointsLabel: '调整数量 *',
+    pointsHint: '正数表示增加点数，负数表示扣减点数',
+    submitText: '确认调整',
+    allowNegative: true,
+  },
+  freeze: {
+    title: '冻结点数',
+    description: (teamName: string) => `冻结团队 "${teamName}" 的可用点数`,
+    pointsLabel: '冻结数量 *',
+    pointsHint: '输入要冻结的点数数量',
+    submitText: '确认冻结',
+    allowNegative: false,
+  },
+  unfreeze: {
+    title: '解冻点数',
+    description: (teamName: string) => `解冻团队 "${teamName}" 的冻结点数`,
+    pointsLabel: '解冻数量 *',
+    pointsHint: '输入要解冻的点数数量',
+    submitText: '确认解冻',
+    allowNegative: false,
+  },
+}
 
 interface AdjustPointsDialogProps {
   account: PointsAccountVO | null
@@ -31,12 +68,20 @@ export function AdjustPointsDialog({
   onOpenChange,
   onSuccess,
 }: AdjustPointsDialogProps) {
+  const [operationType, setOperationType] = useState<OperationType>('adjust')
   const [formData, setFormData] = useState<Omit<AdjustPointsDTO, 'teamId'>>({
     points: 0,
     expireDays: undefined,
     reason: '',
   })
   const [loading, setLoading] = useState(false)
+
+  const config = operationConfig[operationType]
+
+  const handleOperationChange = (value: OperationType) => {
+    setOperationType(value)
+    setFormData({ points: 0, expireDays: undefined, reason: '' })
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,23 +90,51 @@ export function AdjustPointsDialog({
     setLoading(true)
 
     try {
-      const response = await adjustPoints({
-        teamId: account.teamId,
-        ...formData,
-      })
-      if (response.code === 'SUCCESS') {
-        const result = response.data
+      let response
+      let successMessage = ''
+
+      if (operationType === 'adjust') {
+        response = await adjustPoints({
+          teamId: account.teamId,
+          ...formData,
+        })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result = response.data as any
         const action = formData.points > 0 ? '增加' : '扣减'
-        toast.success(`${action} ${Math.abs(formData.points)} 点数成功，当前可用: ${result.availablePoints}`)
+        const availablePoints = result?.availablePoints ?? result?.availableBalance ?? '未知'
+        successMessage = `${action} ${Math.abs(formData.points)} 点数成功，当前可用: ${availablePoints}`
+      } else if (operationType === 'freeze') {
+        response = await freezePoints({
+          teamId: account.teamId,
+          points: Math.abs(formData.points),
+          reason: formData.reason,
+        })
+        const result = response.data
+        successMessage = `冻结 ${result?.operatedPoints ?? formData.points} 点数成功，当前冻结: ${result?.frozenPoints ?? '未知'}`
+      } else {
+        response = await unfreezePoints({
+          teamId: account.teamId,
+          points: Math.abs(formData.points),
+          reason: formData.reason,
+        })
+        const result = response.data
+        successMessage = `解冻 ${result?.operatedPoints ?? formData.points} 点数成功，当前可用: ${result?.availablePoints ?? '未知'}`
+      }
+
+      // 兼容 code 为 'SUCCESS' 或 0 的情况
+      const code = response.code as string | number
+      if (code === 'SUCCESS' || code === 0) {
+        toast.success(successMessage)
         onSuccess()
         onOpenChange(false)
         setFormData({ points: 0, expireDays: undefined, reason: '' })
+        setOperationType('adjust')
       } else {
-        toast.error(response.message || '调整点数失败')
+        toast.error(response.message || `${config.title}失败`)
       }
     } catch (error) {
-      console.error('Failed to adjust points:', error)
-      toast.error('调整点数失败')
+      console.error(`Failed to ${operationType} points:`, error)
+      toast.error(`${config.title}失败`)
     } finally {
       setLoading(false)
     }
@@ -73,63 +146,75 @@ export function AdjustPointsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>调整点数</DialogTitle>
+          <DialogTitle>{config.title}</DialogTitle>
           <DialogDescription>
-            为团队 "{account.teamName}" 调整点数（正数增加，负数扣减）
+            {config.description(account.teamName)}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>当前可用点数</Label>
-            <Input value={account.availablePoints} disabled />
+            <Label>操作类型</Label>
+            <Select value={operationType} onValueChange={handleOperationChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="adjust">调整点数</SelectItem>
+                <SelectItem value="freeze">冻结点数</SelectItem>
+                <SelectItem value="unfreeze">解冻点数</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="points">调整数量 *</Label>
-            <Input
-              id="points"
-              type="number"
-              value={formData.points}
-              onChange={(e) =>
-                setFormData({ ...formData, points: parseInt(e.target.value) || 0 })
-              }
-              placeholder="正数增加，负数扣减"
-              required
-            />
-            <p className="text-xs text-muted-foreground">
-              输入正数表示增加点数，输入负数表示扣减点数
-            </p>
-          </div>
-
-          {formData.points > 0 && (
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="expireDays">过期天数</Label>
-              <Input
-                id="expireDays"
-                type="number"
-                min={1}
-                value={formData.expireDays || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    expireDays: e.target.value ? parseInt(e.target.value) : undefined,
-                  })
-                }
-                placeholder="留空表示永不过期"
-              />
+              <Label>可用点数</Label>
+              <Input value={account.availableBalance.toLocaleString('zh-CN')} disabled />
             </div>
+            <div className="space-y-2">
+              <Label>冻结点数</Label>
+              <Input value={account.frozenBalance.toLocaleString('zh-CN')} disabled />
+            </div>
+          </div>
+
+          <NumberInputWithButtons
+            label={config.pointsLabel}
+            value={formData.points}
+            onChange={(value) => setFormData({ ...formData, points: value })}
+            minValue={config.allowNegative ? undefined : 0}
+            step={10}
+          />
+          <p className="-mt-2 text-xs text-muted-foreground">
+            {config.pointsHint}
+          </p>
+
+          {operationType === 'adjust' && formData.points > 0 && (
+            <NumberInputWithButtons
+              label="过期天数"
+              value={formData.expireDays ?? 0}
+              onChange={(value) =>
+                setFormData({
+                  ...formData,
+                  expireDays: value > 0 ? value : undefined,
+                })
+              }
+              minValue={0}
+              step={1}
+            />
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="reason">调整原因</Label>
+            <Label htmlFor="reason">
+              {operationType === 'adjust' ? '调整原因' : '操作原因'}
+            </Label>
             <Textarea
               id="reason"
               value={formData.reason || ''}
               onChange={(e) =>
                 setFormData({ ...formData, reason: e.target.value })
               }
-              placeholder="请输入调整原因..."
+              placeholder="请输入原因..."
               rows={3}
             />
           </div>
@@ -144,7 +229,7 @@ export function AdjustPointsDialog({
             </Button>
             <Button type="submit" disabled={loading || formData.points === 0}>
               {loading && <Loader2Icon className="mr-2 size-4 animate-spin" />}
-              确认调整
+              {config.submitText}
             </Button>
           </DialogFooter>
         </form>

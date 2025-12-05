@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Loader2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-import { getPointsAccountDetail, setPointsExpiry } from '@/services/subscription'
+import { setPointsExpiry } from '@/services/subscription'
 import type { PointsAccountVO, BatchVO } from '@/types/subscription.types'
 
 interface SetPointsExpiryDialogProps {
@@ -37,26 +37,14 @@ export function SetPointsExpiryDialog({
   onOpenChange,
   onSuccess,
 }: SetPointsExpiryDialogProps) {
-  const [batches, setBatches] = useState<BatchVO[]>([])
   const [selectedBatchId, setSelectedBatchId] = useState<string>('')
   const [expireTime, setExpireTime] = useState<string>('')
   const [loading, setLoading] = useState(false)
-  const [loadingBatches, setLoadingBatches] = useState(false)
 
-  useEffect(() => {
-    if (open && account) {
-      setLoadingBatches(true)
-      getPointsAccountDetail(account.teamId)
-        .then((response) => {
-          if (response.code === 'SUCCESS' && response.data?.batches) {
-            // Only show active batches
-            setBatches(response.data.batches.filter((b: BatchVO) => b.status === 'ACTIVE'))
-          }
-        })
-        .catch(console.error)
-        .finally(() => setLoadingBatches(false))
-    }
-  }, [open, account])
+  // Get active batches from account
+  const activeBatches: BatchVO[] = account?.activeBatches?.filter(
+    (b) => b.status === 'ACTIVE'
+  ) || []
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -101,18 +89,13 @@ export function SetPointsExpiryDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="batch">选择批次 *</Label>
-            {loadingBatches ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2Icon className="size-4 animate-spin" />
-                加载批次中...
-              </div>
-            ) : batches.length > 0 ? (
+            {activeBatches.length > 0 ? (
               <Select value={selectedBatchId} onValueChange={setSelectedBatchId}>
                 <SelectTrigger>
                   <SelectValue placeholder="选择批次" />
                 </SelectTrigger>
                 <SelectContent>
-                  {batches.map((batch) => (
+                  {activeBatches.map((batch) => (
                     <SelectItem key={batch.id} value={batch.id.toString()}>
                       {batch.batchNo} - 剩余 {batch.remainingPoints} 点
                     </SelectItem>

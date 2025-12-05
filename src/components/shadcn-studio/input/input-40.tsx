@@ -20,7 +20,7 @@ interface NumberInputWithButtonsProps {
 export function NumberInputWithButtons({
   value,
   defaultValue = 0,
-  minValue = 0,
+  minValue,
   maxValue,
   step = 1,
   label,

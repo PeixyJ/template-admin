@@ -1,18 +1,17 @@
-import { useId, useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   Loader2Icon,
   EyeIcon,
   PlusIcon,
-  ClockIcon,
   ListIcon,
+  AlertTriangleIcon,
+  RefreshCwIcon,
 } from 'lucide-react'
 
 import type {
-  Column,
   ColumnDef,
-  ColumnFiltersState,
   PaginationState,
 } from '@tanstack/react-table'
 import {
@@ -20,15 +19,12 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Pagination,
   PaginationContent,
@@ -54,211 +50,49 @@ import { usePagination } from '@/hooks/use-pagination'
 import { cn } from '@/lib/utils'
 import type { PointsAccountVO } from '@/types/subscription.types'
 
+export interface PointsFilters {
+  teamId: string
+}
+
 interface PointsAccountDatatableProps {
   data: PointsAccountVO[]
   loading?: boolean
+  filters: PointsFilters
+  onFiltersChange: (filters: PointsFilters) => void
+  onRefresh: () => void
   onViewDetail?: (account: PointsAccountVO) => void
   onAdjust?: (account: PointsAccountVO) => void
-  onSetExpiry?: (account: PointsAccountVO) => void
   onViewTransactions?: (account: PointsAccountVO) => void
   onRowClick?: (account: PointsAccountVO) => void
 }
 
-const columns: ColumnDef<PointsAccountVO>[] = [
-  {
-    id: 'select',
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && 'indeterminate')
-        }
-        onCheckedChange={(value) => table.toggleAllRowsSelected(!!value)}
-        aria-label="全选"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="选择行"
-      />
-    ),
-  },
-  {
-    header: '团队信息',
-    accessorKey: 'teamName',
-    cell: ({ row, table }) => {
-      const meta = table.options.meta as {
-        onRowClick?: (account: PointsAccountVO) => void
-      }
-      return (
-        <div className="flex flex-col gap-0.5">
-          <button
-            type="button"
-            className="text-left font-medium hover:text-primary hover:underline"
-            onClick={() => meta?.onRowClick?.(row.original)}
-          >
-            {row.original.teamName}
-          </button>
-          <span className="text-xs text-muted-foreground">
-            ID: {row.original.teamId}
-          </span>
-        </div>
-      )
-    },
-  },
-  {
-    header: '总点数',
-    accessorKey: 'totalPoints',
-    cell: ({ row }) => (
-      <span className="font-medium">{row.getValue('totalPoints')}</span>
-    ),
-  },
-  {
-    header: '可用点数',
-    accessorKey: 'availablePoints',
-    cell: ({ row }) => (
-      <Badge variant="default" className="bg-green-500">
-        {row.getValue('availablePoints')}
-      </Badge>
-    ),
-  },
-  {
-    header: '已用点数',
-    accessorKey: 'usedPoints',
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.getValue('usedPoints')}</span>
-    ),
-  },
-  {
-    header: '冻结点数',
-    accessorKey: 'frozenPoints',
-    cell: ({ row }) => {
-      const frozen = row.getValue('frozenPoints') as number
-      return frozen > 0 ? (
-        <Badge variant="secondary">{frozen}</Badge>
-      ) : (
-        <span className="text-muted-foreground">0</span>
-      )
-    },
-  },
-  {
-    header: '已过期点数',
-    accessorKey: 'expiredPoints',
-    cell: ({ row }) => {
-      const expired = row.getValue('expiredPoints') as number
-      return expired > 0 ? (
-        <Badge variant="destructive">{expired}</Badge>
-      ) : (
-        <span className="text-muted-foreground">0</span>
-      )
-    },
-  },
-  {
-    header: '最后使用时间',
-    accessorKey: 'lastUsedTime',
-    cell: ({ row }) => {
-      const time = row.getValue('lastUsedTime') as string | null
-      return time ? (
-        <span className="text-sm text-muted-foreground">
-          {new Date(time).toLocaleString('zh-CN')}
-        </span>
-      ) : (
-        <span className="text-muted-foreground">-</span>
-      )
-    },
-  },
-  {
-    id: 'actions',
-    header: '操作',
-    cell: ({ row, table }) => {
-      const meta = table.options.meta as {
-        onViewDetail?: (account: PointsAccountVO) => void
-        onAdjust?: (account: PointsAccountVO) => void
-        onSetExpiry?: (account: PointsAccountVO) => void
-        onViewTransactions?: (account: PointsAccountVO) => void
-      }
+function formatNumber(num: number | null | undefined): string {
+  if (num == null) return '0'
+  return num.toLocaleString('zh-CN')
+}
 
-      return (
-        <TooltipProvider>
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
-                  onClick={() => meta?.onViewDetail?.(row.original)}
-                  title="查看详情"
-                >
-                  <EyeIcon className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>查看详情</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
-                  onClick={() => meta?.onAdjust?.(row.original)}
-                  title="调整点数"
-                >
-                  <PlusIcon className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>调整点数</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
-                  onClick={() => meta?.onSetExpiry?.(row.original)}
-                  title="设置过期"
-                >
-                  <ClockIcon className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>设置过期</TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
-                  onClick={() => meta?.onViewTransactions?.(row.original)}
-                  title="交易记录"
-                >
-                  <ListIcon className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>交易记录</TooltipContent>
-            </Tooltip>
-          </div>
-        </TooltipProvider>
-      )
-    },
-  },
-]
+function formatDateTime(dateStr: string | null): string {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 export function PointsAccountDatatable({
   data,
   loading,
+  filters,
+  onFiltersChange,
+  onRefresh,
   onViewDetail,
   onAdjust,
-  onSetExpiry,
   onViewTransactions,
   onRowClick,
 }: PointsAccountDatatableProps) {
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const pageSize = 10
 
   const [pagination, setPagination] = useState<PaginationState>({
@@ -266,26 +100,175 @@ export function PointsAccountDatatable({
     pageSize: pageSize,
   })
 
+  const columns: ColumnDef<PointsAccountVO>[] = useMemo(
+    () => [
+      {
+        header: '团队',
+        accessorKey: 'teamName',
+        cell: ({ row }) => (
+          <button
+            type="button"
+            className="text-left font-medium hover:text-primary hover:underline"
+            onClick={() => onRowClick?.(row.original)}
+          >
+            {row.original.teamName}
+          </button>
+        ),
+      },
+      {
+        header: '负责人',
+        accessorKey: 'ownerName',
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{row.original.ownerName}</span>
+        ),
+      },
+      {
+        header: '总余额',
+        accessorKey: 'totalBalance',
+        cell: ({ row }) => (
+          <span className="font-bold">{formatNumber(row.original.totalBalance)}</span>
+        ),
+      },
+      {
+        header: '可用余额',
+        accessorKey: 'availableBalance',
+        cell: ({ row }) => (
+          <span className="text-green-600 font-medium">
+            {formatNumber(row.original.availableBalance)}
+          </span>
+        ),
+      },
+      {
+        header: '冻结余额',
+        accessorKey: 'frozenBalance',
+        cell: ({ row }) => {
+          const frozen = row.original.frozenBalance ?? 0
+          return frozen > 0 ? (
+            <span className="text-yellow-600 font-medium">{formatNumber(frozen)}</span>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )
+        },
+      },
+      {
+        header: '累计获得',
+        accessorKey: 'totalEarned',
+        cell: ({ row }) => (
+          <span className="text-green-600">+{formatNumber(row.original.totalEarned)}</span>
+        ),
+      },
+      {
+        header: '累计消费',
+        accessorKey: 'totalConsumed',
+        cell: ({ row }) => (
+          <span className="text-red-600">-{formatNumber(row.original.totalConsumed)}</span>
+        ),
+      },
+      {
+        header: '即将过期',
+        accessorKey: 'expiringPoints',
+        cell: ({ row }) => {
+          const expiring = row.original.expiringPoints ?? 0
+          return expiring > 0 ? (
+            <Badge variant="destructive" className="gap-1">
+              <AlertTriangleIcon className="size-3" />
+              {formatNumber(expiring)}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground">-</span>
+          )
+        },
+      },
+      {
+        header: '状态',
+        accessorKey: 'status',
+        cell: ({ row }) => (
+          <Badge variant={row.original.status ? 'default' : 'secondary'}>
+            {row.original.statusDesc}
+          </Badge>
+        ),
+      },
+      {
+        header: '活跃批次',
+        accessorKey: 'activeBatchCount',
+        cell: ({ row }) => (
+          <span className="font-medium">{row.original.activeBatchCount ?? 0}</span>
+        ),
+      },
+      {
+        header: '最后交易',
+        accessorKey: 'lastTransactionTime',
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {formatDateTime(row.original.lastTransactionTime)}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: '操作',
+        cell: ({ row }) => (
+          <TooltipProvider>
+            <div className="flex items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => onViewDetail?.(row.original)}
+                  >
+                    <EyeIcon className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>查看详情</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => onAdjust?.(row.original)}
+                  >
+                    <PlusIcon className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>调整点数</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-8"
+                    onClick={() => onViewTransactions?.(row.original)}
+                  >
+                    <ListIcon className="size-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>交易记录</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
+        ),
+      },
+    ],
+    [onViewDetail, onAdjust, onViewTransactions, onRowClick]
+  )
+
   const table = useReactTable({
     data,
     columns,
     state: {
-      columnFilters,
       pagination,
     },
-    meta: {
-      onViewDetail,
-      onAdjust,
-      onSetExpiry,
-      onViewTransactions,
-      onRowClick,
-    },
-    onColumnFiltersChange: setColumnFilters,
+    onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    onPaginationChange: setPagination,
   })
 
   const { pages, showLeftEllipsis, showRightEllipsis } = usePagination({
@@ -298,28 +281,43 @@ export function PointsAccountDatatable({
     <div className="w-full">
       <div className="border-b">
         <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-6 py-3">
-          <span className="font-medium">点数账户列表</span>
-          <Filter column={table.getColumn('teamName')!} />
+          <div className="flex items-center gap-3">
+            <Input
+              type="number"
+              placeholder="输入团队ID筛选..."
+              className="w-48"
+              value={filters.teamId}
+              onChange={(e) => onFiltersChange({ ...filters, teamId: e.target.value })}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onRefresh}
+              disabled={loading}
+            >
+              <RefreshCwIcon className={loading ? 'size-4 animate-spin' : 'size-4'} />
+            </Button>
+          </div>
         </div>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="h-14 border-t">
-                {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead
-                      key={header.id}
-                      className="text-muted-foreground first:w-12 first:pl-4 last:px-4"
-                    >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                    </TableHead>
-                  )
-                })}
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    className="text-muted-foreground first:pl-6 last:px-4"
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
               </TableRow>
             ))}
           </TableHeader>
@@ -335,14 +333,11 @@ export function PointsAccountDatatable({
               </TableRow>
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && 'selected'}
-                >
+                <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className="h-16 first:w-12 first:pl-4 last:px-4"
+                      className="h-11 first:pl-6 last:px-4"
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
@@ -453,27 +448,6 @@ export function PointsAccountDatatable({
           </Pagination>
         </div>
       </div>
-    </div>
-  )
-}
-
-function Filter({ column }: { column: Column<PointsAccountVO, unknown> }) {
-  const id = useId()
-  const columnFilterValue = column.getFilterValue()
-
-  return (
-    <div>
-      <Label htmlFor={`${id}-input`} className="sr-only">
-        搜索团队
-      </Label>
-      <Input
-        id={`${id}-input`}
-        value={(columnFilterValue ?? '') as string}
-        onChange={(e) => column.setFilterValue(e.target.value)}
-        placeholder="搜索团队名称..."
-        type="text"
-        className="w-[200px]"
-      />
     </div>
   )
 }

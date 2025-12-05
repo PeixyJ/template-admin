@@ -275,8 +275,72 @@ export interface AdminUpdateSubscriptionDTO {
 
 // ============ 点数相关 ============
 
-/** 点数账户列表项 */
+/** 点数批次 */
+export interface BatchVO {
+  id: number
+  teamId: number
+  batchNo: string
+  source: string
+  sourceDesc: string
+  status: string
+  statusDesc: string
+  totalPoints: number
+  remainingPoints: number
+  usedPoints: number
+  orderId: number | null
+  packId: number | null
+  packName: string | null
+  expireTime: string | null
+  createTime: string
+}
+
+/** 点数交易记录 */
+export interface TransactionVO {
+  id: number
+  teamId: number
+  type: string
+  typeDesc: string
+  points: number
+  balanceBefore: number
+  balanceAfter: number
+  batchId: number | null
+  batchNo: string | null
+  orderId: number | null
+  featureCode: string | null
+  featureName: string | null
+  bizId: string | null
+  remark: string | null
+  operatorId: number | null
+  operatorName: string | null
+  createTime: string
+}
+
+/** 点数账户列表项 (Admin) */
 export interface PointsAccountVO {
+  id: number
+  teamId: number
+  teamName: string
+  ownerId: number
+  ownerName: string
+  totalBalance: number
+  availableBalance: number
+  frozenBalance: number
+  totalEarned: number
+  totalConsumed: number
+  totalExpired: number
+  totalAdjusted: number
+  expiringPoints: number
+  status: boolean
+  statusDesc: string
+  createTime: string
+  lastTransactionTime: string | null
+  activeBatchCount: number
+  activeBatches: BatchVO[]
+  recentTransactions: TransactionVO[]
+}
+
+/** 点数账户详情 (兼容旧API) */
+export interface PointsAccountDetailVO {
   id: number
   teamId: number
   teamName: string
@@ -287,10 +351,11 @@ export interface PointsAccountVO {
   expiredPoints: number
   lastUsedTime: string | null
   createTime: string
+  batches: LegacyBatchVO[]
 }
 
-/** 点数批次 */
-export interface BatchVO {
+/** 旧版批次格式 (兼容) */
+export interface LegacyBatchVO {
   id: number
   batchNo: string
   originalPoints: number
@@ -302,31 +367,35 @@ export interface BatchVO {
   createTime: string
 }
 
-/** 点数账户详情 */
-export interface PointsAccountDetailVO extends PointsAccountVO {
-  batches: BatchVO[]
-}
-
-/** 点数交易记录 */
+/** 点数交易记录 (Admin列表) */
 export interface AdminTransactionVO {
   id: number
-  transactionNo: string
+  transactionNo?: string
   teamId: number
-  teamName: string
-  userId: number | null
-  userNickname: string | null
-  batchId: number | null
-  batchNo: string | null
-  transactionType: TransactionType
-  transactionTypeDesc: string
+  teamName?: string
+  userId?: number | null
+  userNickname?: string | null
+  batchId?: number | null
+  batchNo?: string | null
+  /** 交易类型 - 兼容 type 和 transactionType */
+  transactionType?: TransactionType
+  type?: TransactionType
+  /** 交易类型描述 - 兼容 typeDesc 和 transactionTypeDesc */
+  transactionTypeDesc?: string
+  typeDesc?: string
   points: number
-  balanceBefore: number
+  balanceBefore?: number | null
   balanceAfter: number
-  sourceType: string | null
-  sourceId: string | null
-  sourceDetail: string | null
-  description: string | null
-  remark: string | null
+  sourceType?: string | null
+  sourceId?: string | null
+  sourceDetail?: string | null
+  description?: string | null
+  remark?: string | null
+  featureCode?: string | null
+  featureName?: string | null
+  orderId?: number | null
+  operatorId?: number | null
+  operatorName?: string | null
   createTime: string
 }
 
@@ -350,18 +419,64 @@ export interface AdjustPointsResultVO {
 
 /** 批量调整点数参数 */
 export interface BatchAdjustPointsDTO {
-  items: {
-    teamId: number
-    points: number
-  }[]
-  expireDays?: number
+  /** 团队ID列表 */
+  teamIds: number[]
+  /** 点数（正数=赠送，负数=扣减） */
+  points: number
+  /** 过期时间（仅赠送时有效，为空表示永不过期） */
+  expireTime?: string
+  /** 调整原因/备注 */
   reason?: string
+  /** 操作人ID */
+  operatorId?: number
+}
+
+/** 批量调整点数结果项 */
+export interface BatchAdjustItemVO {
+  /** 团队ID */
+  teamId: number
+  /** 团队名称 */
+  teamName: string
+  /** 调整点数 */
+  adjustedPoints: number
+  /** 当前可用点数 */
+  availablePoints: number
+  /** 是否成功 */
+  success: boolean
+  /** 失败原因 */
+  errorMessage?: string
+}
+
+/** 批量调整点数结果 */
+export interface BatchAdjustResultVO {
+  /** 调整结果列表 */
+  items: BatchAdjustItemVO[]
+  /** 成功数量 */
+  successCount: number
+  /** 失败数量 */
+  failCount: number
 }
 
 /** 设置点数过期时间参数 */
 export interface SetPointsExpiryDTO {
   batchId: number
   expireTime: string
+}
+
+/** 冻结/解冻点数参数 */
+export interface FreezePointsDTO {
+  teamId: number
+  points: number
+  reason?: string
+  operatorId?: number
+}
+
+/** 冻结/解冻点数结果 */
+export interface FreezeResultVO {
+  teamId: number
+  operatedPoints: number
+  availablePoints: number
+  frozenPoints: number
 }
 
 // ============ 订单相关 ============
@@ -670,7 +785,8 @@ export interface PointsAccountListParams {
   page: number
   size: number
   teamId?: number
-  teamName?: string
+  minBalance?: number
+  maxBalance?: number
 }
 
 /** 点数交易记录查询参数 */
@@ -736,6 +852,8 @@ export type PointsAccountListResponse = ApiResult<PageData<PointsAccountVO>>
 export type PointsAccountDetailResponse = ApiResult<PointsAccountDetailVO>
 export type TransactionListResponse = ApiResult<PageData<AdminTransactionVO>>
 export type AdjustPointsResponse = ApiResult<AdjustPointsResultVO>
+export type BatchAdjustPointsResponse = ApiResult<BatchAdjustResultVO>
+export type FreezePointsResponse = ApiResult<FreezeResultVO>
 
 export type OrderListResponse = ApiResult<PageData<AdminOrderVO>>
 export type OrderDetailResponse = ApiResult<AdminOrderDetailVO>

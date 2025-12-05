@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react'
-import { Loader2Icon, ArrowUpIcon, ArrowDownIcon } from 'lucide-react'
+import { Loader2Icon, TrendingUpIcon, TrendingDownIcon } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
 import { getTransactionList } from '@/services/subscription'
 import type { AdminTransactionVO, TransactionType, PointsAccountVO } from '@/types/subscription.types'
@@ -28,13 +35,19 @@ const transactionTypeLabels: Record<TransactionType, string> = {
   REFUND: '退款',
 }
 
-const transactionTypeColors: Record<TransactionType, string> = {
-  PURCHASE: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  CONSUME: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  GRANT: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  ADJUST: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  EXPIRE: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-  REFUND: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+function formatNumber(num: number | null | undefined): string {
+  if (num == null) return '0'
+  return num.toLocaleString('zh-CN')
+}
+
+function formatDateTime(dateStr: string | null): string {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 export function PointsTransactionsSheet({
@@ -65,8 +78,8 @@ export function PointsTransactionsSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[600px] overflow-y-auto sm:max-w-xl">
-        <SheetHeader className="border-b pb-4">
+      <SheetContent className="w-[700px] overflow-y-auto p-0 sm:max-w-2xl">
+        <SheetHeader className="border-b px-6 py-4">
           <SheetTitle>点数交易记录</SheetTitle>
           {account && (
             <p className="text-sm text-muted-foreground">
@@ -74,85 +87,70 @@ export function PointsTransactionsSheet({
             </p>
           )}
         </SheetHeader>
-
-        {loading ? (
-          <div className="flex h-[200px] items-center justify-center">
-            <Loader2Icon className="size-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : transactions.length > 0 ? (
-          <div className="space-y-4 py-6">
-            {transactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="rounded-lg border p-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {transaction.points > 0 ? (
-                      <ArrowUpIcon className="size-4 text-green-500" />
-                    ) : (
-                      <ArrowDownIcon className="size-4 text-red-500" />
-                    )}
-                    <span
-                      className={cn(
-                        'text-lg font-semibold',
-                        transaction.points > 0 ? 'text-green-600' : 'text-red-600'
-                      )}
-                    >
-                      {transaction.points > 0 ? '+' : ''}{transaction.points}
-                    </span>
-                  </div>
-                  <span
-                    className={cn(
-                      'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                      transactionTypeColors[transaction.transactionType]
-                    )}
-                  >
-                    {transactionTypeLabels[transaction.transactionType] || transaction.transactionTypeDesc}
-                  </span>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">交易前: </span>
-                    <span>{transaction.balanceBefore}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">交易后: </span>
-                    <span>{transaction.balanceAfter}</span>
-                  </div>
-                </div>
-
-                {transaction.description && (
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    {transaction.description}
-                  </p>
-                )}
-
-                <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <code>{transaction.transactionNo}</code>
-                  <span>{new Date(transaction.createTime).toLocaleString('zh-CN')}</span>
-                </div>
-
-                {transaction.userNickname && (
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    操作用户: {transaction.userNickname}
-                  </div>
-                )}
-
-                {transaction.batchNo && (
-                  <Badge variant="outline" className="mt-2">
-                    批次: {transaction.batchNo}
-                  </Badge>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-            暂无交易记录
-          </div>
-        )}
+        <div className="px-6 py-4">
+          {loading ? (
+            <div className="flex h-[200px] items-center justify-center">
+              <Loader2Icon className="size-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : transactions.length > 0 ? (
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10"></TableHead>
+                    <TableHead className="w-[60px]">类型</TableHead>
+                    <TableHead>描述</TableHead>
+                    <TableHead className="text-right w-[90px]">点数</TableHead>
+                    <TableHead className="text-right w-[90px]">余额</TableHead>
+                    <TableHead className="text-right w-[100px]">时间</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((transaction) => {
+                    const isPositive = transaction.points > 0
+                    return (
+                      <TableRow key={transaction.id}>
+                        <TableCell className="pr-0">
+                          {isPositive ? (
+                            <TrendingUpIcon className="size-4 text-green-600" />
+                          ) : (
+                            <TrendingDownIcon className="size-4 text-red-600" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {transactionTypeLabels[transaction.transactionType || transaction.type as TransactionType] || transaction.transactionTypeDesc || transaction.typeDesc || '-'}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm max-w-[180px] truncate">
+                          {transaction.description || transaction.remark || transaction.batchNo || '-'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span
+                            className={cn(
+                              'font-medium tabular-nums',
+                              isPositive ? 'text-green-600' : 'text-red-600'
+                            )}
+                          >
+                            {isPositive ? '+' : ''}{formatNumber(transaction.points)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground tabular-nums">
+                          {formatNumber(transaction.balanceAfter)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground text-xs">
+                          {formatDateTime(transaction.createTime)}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+              暂无交易记录
+            </div>
+          )}
+        </div>
       </SheetContent>
     </Sheet>
   )
