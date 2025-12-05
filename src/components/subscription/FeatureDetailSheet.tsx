@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Loader2Icon, HashIcon, TagIcon, SettingsIcon, CoinsIcon } from 'lucide-react'
+import { Loader2Icon, HashIcon, TagIcon, CoinsIcon } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import {
