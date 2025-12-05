@@ -559,7 +559,7 @@ export interface ConfirmPaymentDTO {
 
 // ============ 资源扩容包相关 ============
 
-/** 扩容包列表项 */
+/** 扩容包列表项 (符合 ResourcePackVO) */
 export interface AdminPackVO {
   id: number
   packCode: string
@@ -567,26 +567,23 @@ export interface AdminPackVO {
   resourceType: ResourceType
   resourceTypeDesc: string
   resourceAmount: number
-  resourceUnit: string
   price: number
+  originalPrice: number | null
   currency: string
-  durationType: DurationType
-  durationTypeDesc: string
   durationDays: number | null
-  status: number
-  statusDesc: string
+  description: string | null
+  isVisible: boolean
   sortOrder: number
-  totalAllocations: number
+  status: boolean
   createTime: string
 }
 
 /** 扩容包详情 */
 export interface AdminPackDetailVO extends AdminPackVO {
-  description: string | null
-  originalPrice: number | null
   maxPurchaseCount: number | null
   totalPurchases: number
   totalGrants: number
+  totalAllocations: number
   updateTime: string
 }
 
@@ -599,10 +596,9 @@ export interface CreatePackDTO {
   price: number
   originalPrice?: number
   currency: string
-  durationType: DurationType
-  durationDays?: number
+  durationDays?: number  // null 或不传表示永久
   description?: string
-  maxPurchaseCount?: number
+  isVisible?: boolean
   sortOrder?: number
 }
 
@@ -626,7 +622,15 @@ export interface PackAllocationVO {
   createTime: string
 }
 
-/** 分配扩容包参数 */
+/** 赠送资源包参数 (GrantResourcePackDTO) */
+export interface GrantResourcePackDTO {
+  teamId: number
+  packId: number
+  expireDays?: number  // 有效天数（NULL=永久，覆盖资源包默认配置）
+  reason: string       // 赠送原因（必填）
+}
+
+/** @deprecated 使用 GrantResourcePackDTO 代替 */
 export interface AllocatePackDTO {
   teamId: number
   quantity?: number
@@ -816,8 +820,9 @@ export interface OrderListParams {
 export interface PackListParams {
   page: number
   size: number
-  name?: string
-  type?: ResourceType
+  packCode?: string
+  packName?: string
+  resourceType?: ResourceType
   status?: boolean
 }
 

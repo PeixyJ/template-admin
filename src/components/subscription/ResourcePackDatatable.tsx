@@ -6,20 +6,18 @@ import {
   PencilIcon,
   Trash2Icon,
   GiftIcon,
+  RefreshCwIcon,
+  SearchIcon,
+  XIcon,
 } from 'lucide-react'
 
 import type {
-  Column,
   ColumnDef,
-  ColumnFiltersState,
   PaginationState,
 } from '@tanstack/react-table'
 import {
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
 
@@ -27,13 +25,19 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
   PaginationItem,
 } from '@/components/ui/pagination'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Table,
   TableBody,
@@ -52,11 +56,26 @@ import {
 
 import { usePagination } from '@/hooks/use-pagination'
 import { cn } from '@/lib/utils'
-import type { AdminPackVO, ResourceType, DurationType } from '@/types/subscription.types'
+import type { AdminPackVO, ResourceType } from '@/types/subscription.types'
+
+export interface ResourcePackFilters {
+  packCode?: string
+  packName?: string
+  resourceType?: ResourceType | ''
+  status?: boolean | ''
+}
 
 interface ResourcePackDatatableProps {
   data: AdminPackVO[]
   loading?: boolean
+  total: number
+  page: number
+  pageSize: number
+  filters?: ResourcePackFilters
+  onFiltersChange?: (filters: ResourcePackFilters) => void
+  onPageChange?: (page: number) => void
+  onPageSizeChange?: (size: number) => void
+  onRefresh?: () => void
   onEdit?: (pack: AdminPackVO) => void
   onDelete?: (pack: AdminPackVO) => void
   onStatusChange?: (pack: AdminPackVO, status: boolean) => void
@@ -74,12 +93,6 @@ const resourceTypeColors: Record<ResourceType, string> = {
   PROJECT: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
   MEMBER: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   STORAGE: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-}
-
-const durationTypeLabels: Record<DurationType, string> = {
-  PERMANENT: '永久',
-  FIXED_DAYS: '固定天数',
-  UNTIL_DATE: '固定日期',
 }
 
 const columns: ColumnDef<AdminPackVO>[] = [
@@ -104,7 +117,7 @@ const columns: ColumnDef<AdminPackVO>[] = [
     ),
   },
   {
-    header: '扩容包信息',
+    header: '资源包信息',
     accessorKey: 'packName',
     cell: ({ row, table }) => {
       const meta = table.options.meta as {
@@ -147,46 +160,53 @@ const columns: ColumnDef<AdminPackVO>[] = [
     header: '资源额度',
     accessorKey: 'resourceAmount',
     cell: ({ row }) => (
-      <div className="flex items-center gap-1">
-        <span className="font-medium">{row.original.resourceAmount}</span>
-        <span className="text-xs text-muted-foreground">{row.original.resourceUnit}</span>
-      </div>
+      <span className="font-medium tabular-nums">{row.original.resourceAmount}</span>
     ),
   },
   {
     header: '价格',
     accessorKey: 'price',
-    cell: ({ row }) => (
-      <span className="font-medium">
-        {row.original.currency === 'CNY' ? '¥' : '$'}
-        {row.original.price.toFixed(2)}
-      </span>
-    ),
-  },
-  {
-    header: '有效期',
-    accessorKey: 'durationType',
     cell: ({ row }) => {
-      const type = row.getValue('durationType') as DurationType
-      const days = row.original.durationDays
+      const price = row.original.price
+      const originalPrice = row.original.originalPrice
+      const currencySymbol = row.original.currency === 'CNY' ? '¥' : '$'
       return (
         <div className="flex flex-col gap-0.5">
-          <Badge variant="outline">
-            {durationTypeLabels[type] || row.original.durationTypeDesc}
-          </Badge>
-          {type === 'FIXED_DAYS' && days && (
-            <span className="text-xs text-muted-foreground">{days}天</span>
+          <span className="font-medium tabular-nums">
+            {currencySymbol}{price.toFixed(2)}
+          </span>
+          {originalPrice != null && originalPrice > price && (
+            <span className="text-xs text-muted-foreground line-through tabular-nums">
+              {currencySymbol}{originalPrice.toFixed(2)}
+            </span>
           )}
         </div>
       )
     },
   },
   {
-    header: '分配数',
-    accessorKey: 'totalAllocations',
-    cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.getValue('totalAllocations')}</span>
-    ),
+    header: '有效期',
+    accessorKey: 'durationDays',
+    cell: ({ row }) => {
+      const days = row.original.durationDays
+      return (
+        <Badge variant="outline">
+          {days === null ? '永久' : `${days}天`}
+        </Badge>
+      )
+    },
+  },
+  {
+    header: '可见性',
+    accessorKey: 'isVisible',
+    cell: ({ row }) => {
+      const isVisible = row.original.isVisible
+      return (
+        <Badge variant={isVisible ? 'default' : 'secondary'}>
+          {isVisible ? '可见' : '隐藏'}
+        </Badge>
+      )
+    },
   },
   {
     header: '状态',
@@ -195,10 +215,9 @@ const columns: ColumnDef<AdminPackVO>[] = [
       const meta = table.options.meta as {
         onStatusChange?: (pack: AdminPackVO, status: boolean) => void
       }
-      const isActive = row.original.status === 1
       return (
         <Switch
-          checked={isActive}
+          checked={row.original.status}
           onCheckedChange={(checked) => meta?.onStatusChange?.(row.original, checked)}
         />
       )
@@ -208,7 +227,7 @@ const columns: ColumnDef<AdminPackVO>[] = [
     header: '排序',
     accessorKey: 'sortOrder',
     cell: ({ row }) => (
-      <span className="text-muted-foreground">{row.getValue('sortOrder')}</span>
+      <span className="text-muted-foreground tabular-nums">{row.getValue('sortOrder')}</span>
     ),
   },
   {
@@ -277,17 +296,26 @@ const columns: ColumnDef<AdminPackVO>[] = [
 export function ResourcePackDatatable({
   data,
   loading,
+  total,
+  page,
+  pageSize,
+  filters,
+  onFiltersChange,
+  onPageChange,
+  onRefresh,
   onEdit,
   onDelete,
   onStatusChange,
   onAllocate,
   onRowClick,
 }: ResourcePackDatatableProps) {
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const pageSize = 10
+  const id = useId()
+  const [localKeyword, setLocalKeyword] = useState(filters?.packName || '')
+
+  const totalPages = Math.ceil(total / pageSize)
 
   const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
+    pageIndex: page - 1,
     pageSize: pageSize,
   })
 
@@ -295,7 +323,6 @@ export function ResourcePackDatatable({
     data,
     columns,
     state: {
-      columnFilters,
       pagination,
     },
     meta: {
@@ -305,27 +332,147 @@ export function ResourcePackDatatable({
       onAllocate,
       onRowClick,
     },
-    onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: true,
+    pageCount: totalPages,
     onPaginationChange: setPagination,
   })
 
   const { pages, showLeftEllipsis, showRightEllipsis } = usePagination({
-    currentPage: table.getState().pagination.pageIndex + 1,
-    totalPages: table.getPageCount(),
+    currentPage: page,
+    totalPages: totalPages,
     paginationItemsToDisplay: 3,
   })
+
+  const handleSearch = () => {
+    onFiltersChange?.({ ...filters, packName: localKeyword })
+    onPageChange?.(1) // 搜索时重置到第一页
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch()
+    }
+  }
+
+  const handleClearFilters = () => {
+    setLocalKeyword('')
+    onFiltersChange?.({
+      packCode: '',
+      packName: '',
+      resourceType: '',
+      status: '',
+    })
+    onPageChange?.(1)
+  }
+
+  const handlePageChange = (newPage: number) => {
+    onPageChange?.(newPage)
+  }
+
+  const hasActiveFilters = filters?.packName || filters?.packCode || filters?.resourceType || filters?.status !== ''
+
+  // 计算当前显示的记录范围
+  const startRecord = (page - 1) * pageSize + 1
+  const endRecord = Math.min(page * pageSize, total)
 
   return (
     <div className="w-full">
       <div className="border-b">
-        <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-6 py-3">
-          <span className="font-medium">扩容包列表</span>
-          <Filter column={table.getColumn('packName')!} />
+        {/* 筛选区域 */}
+        <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-b">
+          {/* 关键词搜索 */}
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Input
+                id={`${id}-keyword`}
+                value={localKeyword}
+                onChange={(e) => setLocalKeyword(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="搜索资源包名称..."
+                className="w-[200px] pr-8"
+              />
+              {localKeyword && (
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  onClick={() => {
+                    setLocalKeyword('')
+                    onFiltersChange?.({ ...filters, packName: '' })
+                    onPageChange?.(1)
+                  }}
+                >
+                  <XIcon className="size-4" />
+                </button>
+              )}
+            </div>
+            <Button size="icon" variant="outline" onClick={handleSearch}>
+              <SearchIcon className="size-4" />
+            </Button>
+          </div>
+
+          {/* 资源类型筛选 */}
+          <Select
+            value={filters?.resourceType || 'all'}
+            onValueChange={(value) => {
+              onFiltersChange?.({ ...filters, resourceType: value === 'all' ? '' : value as ResourceType })
+              onPageChange?.(1)
+            }}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="资源类型" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部类型</SelectItem>
+              <SelectItem value="PROJECT">项目数</SelectItem>
+              <SelectItem value="MEMBER">成员数</SelectItem>
+              <SelectItem value="STORAGE">存储空间</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* 状态筛选 */}
+          <Select
+            value={filters?.status === '' ? 'all' : filters?.status?.toString() || 'all'}
+            onValueChange={(value) => {
+              onFiltersChange?.({
+                ...filters,
+                status: value === 'all' ? '' : value === 'true',
+              })
+              onPageChange?.(1)
+            }}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="状态" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部状态</SelectItem>
+              <SelectItem value="true">已启用</SelectItem>
+              <SelectItem value="false">已禁用</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* 清除筛选 */}
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+              <XIcon className="mr-1 size-4" />
+              清除筛选
+            </Button>
+          )}
+
+          {/* 刷新按钮 */}
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onRefresh}
+              disabled={loading}
+              title="刷新"
+            >
+              <RefreshCwIcon className={cn('size-4', loading && 'animate-spin')} />
+            </Button>
+          </div>
         </div>
+
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -393,112 +540,83 @@ export function ResourcePackDatatable({
           className="whitespace-nowrap text-sm text-muted-foreground"
           aria-live="polite"
         >
-          显示{' '}
-          <span>
-            {table.getState().pagination.pageIndex *
-              table.getState().pagination.pageSize +
-              1}{' '}
-            到{' '}
-            {Math.min(
-              Math.max(
-                table.getState().pagination.pageIndex *
-                  table.getState().pagination.pageSize +
-                  table.getState().pagination.pageSize,
-                0
-              ),
-              table.getRowCount()
-            )}
-          </span>{' '}
-          条，共 <span>{table.getRowCount().toString()} 条</span>
+          {total > 0 ? (
+            <>
+              显示 <span>{startRecord}</span> 到 <span>{endRecord}</span> 条，共{' '}
+              <span>{total}</span> 条
+            </>
+          ) : (
+            '暂无数据'
+          )}
         </p>
 
-        <div>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <Button
-                  className="disabled:pointer-events-none disabled:opacity-50"
-                  variant="ghost"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  aria-label="上一页"
-                >
-                  <ChevronLeftIcon aria-hidden="true" />
-                  上一页
-                </Button>
-              </PaginationItem>
-
-              {showLeftEllipsis && (
+        {totalPages > 1 && (
+          <div>
+            <Pagination>
+              <PaginationContent>
                 <PaginationItem>
-                  <PaginationEllipsis />
+                  <Button
+                    className="disabled:pointer-events-none disabled:opacity-50"
+                    variant="ghost"
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page <= 1}
+                    aria-label="上一页"
+                  >
+                    <ChevronLeftIcon aria-hidden="true" />
+                    上一页
+                  </Button>
                 </PaginationItem>
-              )}
 
-              {pages.map((page) => {
-                const isActive =
-                  page === table.getState().pagination.pageIndex + 1
-
-                return (
-                  <PaginationItem key={page}>
-                    <Button
-                      size="icon"
-                      variant={isActive ? 'default' : 'ghost'}
-                      className={cn(
-                        !isActive &&
-                          'bg-primary/10 text-primary hover:bg-primary/20'
-                      )}
-                      onClick={() => table.setPageIndex(page - 1)}
-                      aria-current={isActive ? 'page' : undefined}
-                    >
-                      {page}
-                    </Button>
+                {showLeftEllipsis && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
                   </PaginationItem>
-                )
-              })}
+                )}
 
-              {showRightEllipsis && (
+                {pages.map((pageNum) => {
+                  const isActive = pageNum === page
+
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <Button
+                        size="icon"
+                        variant={isActive ? 'default' : 'ghost'}
+                        className={cn(
+                          !isActive &&
+                            'bg-primary/10 text-primary hover:bg-primary/20'
+                        )}
+                        onClick={() => handlePageChange(pageNum)}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        {pageNum}
+                      </Button>
+                    </PaginationItem>
+                  )
+                })}
+
+                {showRightEllipsis && (
+                  <PaginationItem>
+                    <PaginationEllipsis />
+                  </PaginationItem>
+                )}
+
                 <PaginationItem>
-                  <PaginationEllipsis />
+                  <Button
+                    className="disabled:pointer-events-none disabled:opacity-50"
+                    variant="ghost"
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={page >= totalPages}
+                    aria-label="下一页"
+                  >
+                    下一页
+                    <ChevronRightIcon aria-hidden="true" />
+                  </Button>
                 </PaginationItem>
-              )}
-
-              <PaginationItem>
-                <Button
-                  className="disabled:pointer-events-none disabled:opacity-50"
-                  variant="ghost"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                  aria-label="下一页"
-                >
-                  下一页
-                  <ChevronRightIcon aria-hidden="true" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
-        </div>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
-    </div>
-  )
-}
-
-function Filter({ column }: { column: Column<AdminPackVO, unknown> }) {
-  const id = useId()
-  const columnFilterValue = column.getFilterValue()
-
-  return (
-    <div>
-      <Label htmlFor={`${id}-input`} className="sr-only">
-        搜索扩容包
-      </Label>
-      <Input
-        id={`${id}-input`}
-        value={(columnFilterValue ?? '') as string}
-        onChange={(e) => column.setFilterValue(e.target.value)}
-        placeholder="搜索扩容包名称..."
-        type="text"
-        className="w-[200px]"
-      />
     </div>
   )
 }

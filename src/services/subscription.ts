@@ -50,6 +50,7 @@ import type {
   CreatePackDTO,
   UpdatePackDTO,
   AllocatePackDTO,
+  GrantResourcePackDTO,
   RevokePackDTO,
   // Grant
   GrantListParams,
@@ -360,7 +361,13 @@ export async function getPackAllocations(packId: number, params: { page: number;
   return response.data
 }
 
-/** 分配扩容包给团队 */
+/** 赠送资源包给团队 */
+export async function grantResourcePack(data: GrantResourcePackDTO): Promise<ApiResult<number>> {
+  const response = await api.post(`${BASE_URL}/resource-packs/grant`, data)
+  return response.data
+}
+
+/** @deprecated 使用 grantResourcePack 代替 */
 export async function allocatePack(packId: number, data: AllocatePackDTO): Promise<ApiResult<void>> {
   const response = await api.post(`${BASE_URL}/resource-packs/${packId}/allocate`, data)
   return response.data

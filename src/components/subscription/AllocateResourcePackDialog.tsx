@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Loader2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -13,10 +13,12 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { NumberInputWithButtons } from '@/components/shadcn-studio/input/input-40'
 
-import { allocatePack } from '@/services/subscription'
-import type { AdminPackVO, AllocatePackDTO } from '@/types/subscription.types'
+import { grantResourcePack } from '@/services/subscription'
+import type { AdminPackVO, GrantResourcePackDTO } from '@/types/subscription.types'
 
 interface AllocateResourcePackDialogProps {
   pack: AdminPackVO | null
@@ -31,33 +33,49 @@ export function AllocateResourcePackDialog({
   onOpenChange,
   onSuccess,
 }: AllocateResourcePackDialogProps) {
-  const [formData, setFormData] = useState<AllocatePackDTO>({
+  const [formData, setFormData] = useState<Omit<GrantResourcePackDTO, 'packId'>>({
     teamId: 0,
-    quantity: 1,
     expireDays: undefined,
     reason: '',
   })
   const [loading, setLoading] = useState(false)
+  const [useDefaultExpiry, setUseDefaultExpiry] = useState(true)
+
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        teamId: 0,
+        expireDays: undefined,
+        reason: '',
+      })
+      setUseDefaultExpiry(true)
+    }
+  }, [open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!pack || !formData.teamId) return
+    if (!pack || !formData.teamId || !formData.reason) return
 
     setLoading(true)
 
     try {
-      const response = await allocatePack(pack.id, formData)
+      const submitData: GrantResourcePackDTO = {
+        packId: pack.id,
+        teamId: formData.teamId,
+        reason: formData.reason,
+        ...(useDefaultExpiry ? {} : { expireDays: formData.expireDays }),
+      }
+      const response = await grantResourcePack(submitData)
       if (response.code === 'SUCCESS') {
-        toast.success('扩容包分配成功')
+        toast.success('资源包赠送成功')
         onSuccess()
         onOpenChange(false)
-        setFormData({ teamId: 0, quantity: 1, expireDays: undefined, reason: '' })
       } else {
-        toast.error(response.message || '分配失败')
+        toast.error(response.message || '赠送失败')
       }
     } catch (error) {
-      console.error('Failed to allocate pack:', error)
-      toast.error('分配失败')
+      console.error('Failed to grant resource pack:', error)
+      toast.error('赠送失败')
     } finally {
       setLoading(false)
     }
@@ -69,73 +87,63 @@ export function AllocateResourcePackDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>分配扩容包</DialogTitle>
+          <DialogTitle>赠送资源包</DialogTitle>
           <DialogDescription>
-            将 "{pack.packName}" 分配给团队
+            将 "{pack.packName}" 赠送给团队
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>扩容包</Label>
-            <Input value={`${pack.packName} (${pack.resourceAmount} ${pack.resourceUnit})`} disabled />
+            <Label>资源包</Label>
+            <Input value={`${pack.packName} (${pack.resourceAmount})`} disabled />
+          </div>
+
+          <NumberInputWithButtons
+            label="团队ID *"
+            value={formData.teamId || undefined}
+            onChange={(value) =>
+              setFormData({ ...formData, teamId: value })
+            }
+            minValue={1}
+            step={1}
+          />
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="useDefaultExpiry"
+                checked={useDefaultExpiry}
+                onCheckedChange={setUseDefaultExpiry}
+              />
+              <Label htmlFor="useDefaultExpiry" className="font-normal">
+                {useDefaultExpiry ? '使用资源包默认有效期' : '自定义有效期'}
+              </Label>
+            </div>
+            {!useDefaultExpiry && (
+              <NumberInputWithButtons
+                label="有效天数"
+                value={formData.expireDays}
+                onChange={(value) =>
+                  setFormData({ ...formData, expireDays: value })
+                }
+                minValue={1}
+                step={1}
+              />
+            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="teamId">团队ID *</Label>
-            <Input
-              id="teamId"
-              type="number"
-              min={1}
-              value={formData.teamId || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, teamId: parseInt(e.target.value) || 0 })
-              }
-              placeholder="请输入团队ID"
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="quantity">数量</Label>
-            <Input
-              id="quantity"
-              type="number"
-              min={1}
-              value={formData.quantity || 1}
-              onChange={(e) =>
-                setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="expireDays">过期天数</Label>
-            <Input
-              id="expireDays"
-              type="number"
-              min={1}
-              value={formData.expireDays || ''}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  expireDays: e.target.value ? parseInt(e.target.value) : undefined,
-                })
-              }
-              placeholder="留空表示使用默认过期时间"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="reason">分配原因</Label>
+            <Label htmlFor="reason">赠送原因 *</Label>
             <Textarea
               id="reason"
-              value={formData.reason || ''}
+              value={formData.reason}
               onChange={(e) =>
                 setFormData({ ...formData, reason: e.target.value })
               }
-              placeholder="请输入分配原因..."
+              placeholder="请输入赠送原因..."
               rows={3}
+              required
             />
           </div>
 
@@ -147,9 +155,9 @@ export function AllocateResourcePackDialog({
             >
               取消
             </Button>
-            <Button type="submit" disabled={loading || !formData.teamId}>
+            <Button type="submit" disabled={loading || !formData.teamId || !formData.reason}>
               {loading && <Loader2Icon className="mr-2 size-4 animate-spin" />}
-              确认分配
+              确认赠送
             </Button>
           </DialogFooter>
         </form>

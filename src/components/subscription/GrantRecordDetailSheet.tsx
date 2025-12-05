@@ -81,185 +81,186 @@ export function GrantRecordDetailSheet({
             赠送详情
           </SheetTitle>
         </SheetHeader>
-
-        {loading ? (
-          <div className="flex h-[200px] items-center justify-center">
-            <Loader2Icon className="size-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : record ? (
-          <div className="space-y-6 py-6">
-            {/* 基本信息 */}
-            <section className="space-y-4">
-              <h3 className="flex items-center gap-2 font-medium">
-                <GiftIcon className="size-4" />
-                基本信息
-              </h3>
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">赠送编号</span>
-                  <code className="rounded bg-muted px-2 py-1 text-sm">
-                    {record.grantId}
-                  </code>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">赠送类型</span>
-                  <span
-                    className={cn(
-                      'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                      grantTypeColors[record.grantType]
-                    )}
-                  >
-                    {grantTypeLabels[record.grantType] || record.grantTypeDesc}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">状态</span>
-                  <span
-                    className={cn(
-                      'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                      grantStatusColors[record.status]
-                    )}
-                  >
-                    {grantStatusLabels[record.status] || record.statusDesc}
-                  </span>
-                </div>
-              </div>
-            </section>
-
-            {/* 接收方信息 */}
-            <section className="space-y-4 border-t pt-4">
-              <h3 className="flex items-center gap-2 font-medium">
-                <UserIcon className="size-4" />
-                接收方信息
-              </h3>
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">团队</span>
-                  <span className="font-medium">{record.teamName}</span>
-                </div>
-              </div>
-            </section>
-
-            {/* 赠送内容 */}
-            <section className="space-y-4 border-t pt-4">
-              <h3 className="font-medium">赠送内容</h3>
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">赠送内容</span>
-                  <span className="font-medium">{record.grantContent}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">赠送数量</span>
-                  <span>{record.grantAmount}</span>
-                </div>
-                {record.reason && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-muted-foreground">赠送原因</span>
-                    <p className="text-sm">{record.reason}</p>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* 生效信息 */}
-            <section className="space-y-4 border-t pt-4">
-              <h3 className="flex items-center gap-2 font-medium">
-                <CalendarIcon className="size-4" />
-                生效信息
-              </h3>
-              <div className="grid gap-3">
-                {record.effectiveTime && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">生效时间</span>
-                    <span>{new Date(record.effectiveTime).toLocaleString('zh-CN')}</span>
-                  </div>
-                )}
-                {record.expireTime && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">过期时间</span>
-                    <span>{new Date(record.expireTime).toLocaleString('zh-CN')}</span>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* 操作信息 */}
-            <section className="space-y-4 border-t pt-4">
-              <h3 className="font-medium">操作信息</h3>
-              <div className="grid gap-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">操作人</span>
-                  <span>{record.operatorName || '-'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">创建时间</span>
-                  <span>{new Date(record.createTime).toLocaleString('zh-CN')}</span>
-                </div>
-              </div>
-            </section>
-
-            {/* 撤销信息 */}
-            {record.status === 'REVOKED' && (
-              <section className="space-y-4 border-t pt-4">
-                <h3 className="flex items-center gap-2 font-medium text-destructive">
-                  <AlertCircleIcon className="size-4" />
-                  撤销信息
+        <div className="px-6">
+          {loading ? (
+            <div className="flex h-[200px] items-center justify-center">
+              <Loader2Icon className="size-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : record ? (
+            <div className="space-y-6">
+              {/* 基本信息 */}
+              <section className="space-y-4">
+                <h3 className="flex items-center gap-2 font-medium">
+                  <GiftIcon className="size-4" />
+                  基本信息
                 </h3>
                 <div className="grid gap-3">
-                  {record.revokedByName && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">撤销人</span>
-                      <span>{record.revokedByName}</span>
-                    </div>
-                  )}
-                  {record.revokedAt && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">撤销时间</span>
-                      <span>{new Date(record.revokedAt).toLocaleString('zh-CN')}</span>
-                    </div>
-                  )}
-                  {record.revokeReason && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">赠送编号</span>
+                    <code className="rounded bg-muted px-2 py-1 text-sm">
+                      {record.grantId}
+                    </code>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">赠送类型</span>
+                    <span
+                      className={cn(
+                        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                        grantTypeColors[record.grantType]
+                      )}
+                    >
+                      {grantTypeLabels[record.grantType] || record.grantTypeDesc}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">状态</span>
+                    <span
+                      className={cn(
+                        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
+                        grantStatusColors[record.status]
+                      )}
+                    >
+                      {grantStatusLabels[record.status] || record.statusDesc}
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              {/* 接收方信息 */}
+              <section className="space-y-4 border-t pt-4">
+                <h3 className="flex items-center gap-2 font-medium">
+                  <UserIcon className="size-4" />
+                  接收方信息
+                </h3>
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">团队</span>
+                    <span className="font-medium">{record.teamName}</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* 赠送内容 */}
+              <section className="space-y-4 border-t pt-4">
+                <h3 className="font-medium">赠送内容</h3>
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">赠送内容</span>
+                    <span className="font-medium">{record.grantContent}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">赠送数量</span>
+                    <span>{record.grantAmount}</span>
+                  </div>
+                  {record.reason && (
                     <div className="flex flex-col gap-1">
-                      <span className="text-muted-foreground">撤销原因</span>
-                      <p className="text-sm text-destructive">{record.revokeReason}</p>
+                      <span className="text-muted-foreground">赠送原因</span>
+                      <p className="text-sm">{record.reason}</p>
                     </div>
                   )}
                 </div>
               </section>
-            )}
 
-            {/* 备注 */}
-            {record.remark && (
-              <section className="space-y-3 border-t pt-4">
-                <h3 className="font-medium">备注</h3>
-                <p className="text-sm text-muted-foreground">{record.remark}</p>
+              {/* 生效信息 */}
+              <section className="space-y-4 border-t pt-4">
+                <h3 className="flex items-center gap-2 font-medium">
+                  <CalendarIcon className="size-4" />
+                  生效信息
+                </h3>
+                <div className="grid gap-3">
+                  {record.effectiveTime && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">生效时间</span>
+                      <span>{new Date(record.effectiveTime).toLocaleString('zh-CN')}</span>
+                    </div>
+                  )}
+                  {record.expireTime && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">过期时间</span>
+                      <span>{new Date(record.expireTime).toLocaleString('zh-CN')}</span>
+                    </div>
+                  )}
+                </div>
               </section>
-            )}
 
-            {/* 时间信息 */}
-            <section className="space-y-3 border-t pt-4">
-              <h3 className="font-medium">时间信息</h3>
-              <div className="grid gap-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">创建时间</span>
-                  <span>
-                    {new Date(record.createTime).toLocaleString('zh-CN')}
-                  </span>
+              {/* 操作信息 */}
+              <section className="space-y-4 border-t pt-4">
+                <h3 className="font-medium">操作信息</h3>
+                <div className="grid gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">操作人</span>
+                    <span>{record.operatorName || '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">创建时间</span>
+                    <span>{new Date(record.createTime).toLocaleString('zh-CN')}</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">更新时间</span>
-                  <span>
-                    {new Date(record.updateTime).toLocaleString('zh-CN')}
-                  </span>
+              </section>
+
+              {/* 撤销信息 */}
+              {record.status === 'REVOKED' && (
+                <section className="space-y-4 border-t pt-4">
+                  <h3 className="flex items-center gap-2 font-medium text-destructive">
+                    <AlertCircleIcon className="size-4" />
+                    撤销信息
+                  </h3>
+                  <div className="grid gap-3">
+                    {record.revokedByName && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">撤销人</span>
+                        <span>{record.revokedByName}</span>
+                      </div>
+                    )}
+                    {record.revokedAt && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">撤销时间</span>
+                        <span>{new Date(record.revokedAt).toLocaleString('zh-CN')}</span>
+                      </div>
+                    )}
+                    {record.revokeReason && (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-muted-foreground">撤销原因</span>
+                        <p className="text-sm text-destructive">{record.revokeReason}</p>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {/* 备注 */}
+              {record.remark && (
+                <section className="space-y-3 border-t pt-4">
+                  <h3 className="font-medium">备注</h3>
+                  <p className="text-sm text-muted-foreground">{record.remark}</p>
+                </section>
+              )}
+
+              {/* 时间信息 */}
+              <section className="space-y-3 border-t pt-4">
+                <h3 className="font-medium">时间信息</h3>
+                <div className="grid gap-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">创建时间</span>
+                    <span>
+                      {new Date(record.createTime).toLocaleString('zh-CN')}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">更新时间</span>
+                    <span>
+                      {new Date(record.updateTime).toLocaleString('zh-CN')}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </section>
-          </div>
-        ) : (
-          <div className="flex h-[200px] items-center justify-center text-muted-foreground">
-            无数据
-          </div>
-        )}
+              </section>
+            </div>
+          ) : (
+            <div className="flex h-[200px] items-center justify-center text-muted-foreground">
+              无数据
+            </div>
+          )}
+        </div>
       </SheetContent>
     </Sheet>
   )
