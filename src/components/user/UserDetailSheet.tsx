@@ -9,6 +9,9 @@ import {
   ClockIcon,
   CopyIcon,
   CheckIcon,
+  UsersIcon,
+  CrownIcon,
+  WalletIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -23,8 +26,10 @@ import {
 } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
 
-import { getUserDetail } from '@/services/userAdmin'
+import { getUserDetail, getUserTeams } from '@/services/userAdmin'
 import type { UserDetailVO } from '@/types/user.types'
+import type { TeamVO } from '@/types/team.types'
+import { cn } from '@/lib/utils'
 
 interface UserDetailSheetProps {
   userId: number | null
@@ -39,19 +44,29 @@ export function UserDetailSheet({
 }: UserDetailSheetProps) {
   const [loading, setLoading] = useState(false)
   const [userDetail, setUserDetail] = useState<UserDetailVO | null>(null)
+  const [teams, setTeams] = useState<TeamVO[]>([])
 
   useEffect(() => {
     if (open && userId) {
-      fetchUserDetail(userId)
+      fetchUserData(userId)
+    } else {
+      setUserDetail(null)
+      setTeams([])
     }
   }, [open, userId])
 
-  const fetchUserDetail = async (id: number) => {
+  const fetchUserData = async (id: number) => {
     setLoading(true)
     try {
-      const res = await getUserDetail(id)
-      if (res.data.code === 'SUCCESS') {
-        setUserDetail(res.data.data)
+      const [detailRes, teamsRes] = await Promise.all([
+        getUserDetail(id),
+        getUserTeams(id),
+      ])
+      if (detailRes.data.code === 'SUCCESS') {
+        setUserDetail(detailRes.data.data)
+      }
+      if (teamsRes.data.code === 'SUCCESS') {
+        setTeams(teamsRes.data.data || [])
       }
     } finally {
       setLoading(false)
@@ -193,6 +208,107 @@ export function UserDetailSheet({
                 </div>
               </>
             )}
+
+            {/* 所在团队 */}
+            <Separator />
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <h4 className="flex items-center gap-2 font-medium">
+                  <UsersIcon className="size-4" />
+                  所在团队
+                </h4>
+                <Badge variant="outline">{teams.length} 个</Badge>
+              </div>
+
+              {teams.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  {teams.map((team) => (
+                    <div
+                      key={team.id}
+                      className="rounded-lg border bg-muted/30 p-3"
+                    >
+                      <div className="mb-2 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="size-8 rounded-lg">
+                            {team.logoUrl ? (
+                              <AvatarImage src={team.logoUrl} alt={team.name} />
+                            ) : null}
+                            <AvatarFallback className="rounded-lg bg-primary/10 text-primary">
+                              <UsersIcon className="size-4" />
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium">
+                              {team.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              ID: {team.id}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          {team.isDefault && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                            >
+                              <CrownIcon className="mr-1 size-3" />
+                              默认
+                            </Badge>
+                          )}
+                          {team.ownerId === userDetail.id && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400"
+                            >
+                              所有者
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="grid gap-1.5 text-xs text-muted-foreground">
+                        {team.planName && (
+                          <div className="flex items-center gap-1.5">
+                            <span>套餐: {team.planName}</span>
+                            {team.planEndDate && (
+                              <span className="text-muted-foreground/70">
+                                (到期: {new Date(team.planEndDate).toLocaleDateString('zh-CN')})
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {team.availablePoints !== null && (
+                          <div className="flex items-center gap-1.5">
+                            <WalletIcon className="size-3" />
+                            <span>可用点数:</span>
+                            <span
+                              className={cn(
+                                'font-medium',
+                                team.availablePoints > 0
+                                  ? 'text-green-600 dark:text-green-400'
+                                  : 'text-muted-foreground'
+                              )}
+                            >
+                              {team.availablePoints.toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <CalendarIcon className="size-3" />
+                          <span>
+                            创建于 {new Date(team.createTime).toLocaleDateString('zh-CN')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  暂无团队
+                </div>
+              )}
+            </div>
 
           </div>
         ) : (

@@ -61,19 +61,19 @@ export function ResourcePackDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[500px] overflow-y-auto sm:max-w-lg">
-        <SheetHeader className="border-b pb-4">
+        <SheetHeader className="border-b">
           <SheetTitle className="flex items-center gap-2">
             <PackageIcon className="size-5" />
             资源包详情
           </SheetTitle>
         </SheetHeader>
-        <div className="p-6">
+        <div className="px-6">
           {loading ? (
             <div className="flex h-[200px] items-center justify-center">
               <Loader2Icon className="size-8 animate-spin text-muted-foreground" />
             </div>
           ) : pack ? (
-            <div className="space-y-6 py-6">
+            <div className="space-y-6 pb-6">
               {/* 基本信息 */}
               <section className="space-y-4">
                 <h3 className="flex items-center gap-2 font-medium">

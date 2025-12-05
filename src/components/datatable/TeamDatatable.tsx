@@ -53,6 +53,9 @@ interface TeamDatatableProps {
   data: TeamVO[]
   loading?: boolean
   onDisband?: (team: TeamVO) => void
+  pagination?: { pageIndex: number; pageSize: number }
+  totalCount?: number
+  onPaginationChange?: (pagination: { pageIndex: number; pageSize: number }) => void
 }
 
 const teamTypeLabels: Record<TeamType, string> = {
@@ -245,21 +248,44 @@ export function TeamDatatable({
   data,
   loading,
   onDisband,
+  pagination: externalPagination,
+  totalCount,
+  onPaginationChange,
 }: TeamDatatableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const pageSize = 10
 
-  const [pagination, setPagination] = useState<PaginationState>({
+  // 服务端分页模式
+  const isServerSide = !!externalPagination && !!onPaginationChange
+
+  const [internalPagination, setInternalPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: pageSize,
   })
+
+  const pagination: PaginationState = isServerSide ? externalPagination : internalPagination
+
+  const handlePaginationChange = (updater: PaginationState | ((old: PaginationState) => PaginationState)) => {
+    if (isServerSide) {
+      const currentPagination = externalPagination
+      const newPagination = typeof updater === 'function' ? updater(currentPagination) : updater
+      onPaginationChange(newPagination)
+    } else {
+      setInternalPagination(updater)
+    }
+  }
 
   const handleTeamClick = (team: TeamVO) => {
     setSelectedTeamId(team.id)
     setSheetOpen(true)
   }
+
+  // 服务端分页时计算总页数
+  const serverSidePageCount = isServerSide && totalCount
+    ? Math.ceil(totalCount / pagination.pageSize)
+    : undefined
 
   const table = useReactTable({
     data,
@@ -274,15 +300,19 @@ export function TeamDatatable({
     },
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
+    getFilteredRowModel: isServerSide ? undefined : getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onPaginationChange: setPagination,
+    getPaginationRowModel: isServerSide ? undefined : getPaginationRowModel(),
+    onPaginationChange: handlePaginationChange,
+    manualPagination: isServerSide,
+    pageCount: serverSidePageCount,
   })
 
+  const actualPageCount = isServerSide ? (serverSidePageCount ?? 1) : table.getPageCount()
+
   const { pages, showLeftEllipsis, showRightEllipsis } = usePagination({
-    currentPage: table.getState().pagination.pageIndex + 1,
-    totalPages: table.getPageCount(),
+    currentPage: pagination.pageIndex + 1,
+    totalPages: actualPageCount,
     paginationItemsToDisplay: 3,
   })
 
@@ -362,21 +392,14 @@ export function TeamDatatable({
         >
           显示{' '}
           <span>
-            {table.getState().pagination.pageIndex *
-              table.getState().pagination.pageSize +
-              1}{' '}
+            {pagination.pageIndex * pagination.pageSize + 1}{' '}
             到{' '}
             {Math.min(
-              Math.max(
-                table.getState().pagination.pageIndex *
-                  table.getState().pagination.pageSize +
-                  table.getState().pagination.pageSize,
-                0
-              ),
-              table.getRowCount()
+              pagination.pageIndex * pagination.pageSize + pagination.pageSize,
+              isServerSide ? (totalCount ?? 0) : table.getRowCount()
             )}
           </span>{' '}
-          条，共 <span>{table.getRowCount().toString()} 条</span>
+          条，共 <span>{isServerSide ? (totalCount ?? 0) : table.getRowCount()} 条</span>
         </p>
 
         <div>
@@ -402,8 +425,7 @@ export function TeamDatatable({
               )}
 
               {pages.map((page) => {
-                const isActive =
-                  page === table.getState().pagination.pageIndex + 1
+                const isActive = page === pagination.pageIndex + 1
 
                 return (
                   <PaginationItem key={page}>

@@ -6,6 +6,11 @@ import {
   CrownIcon,
   ShieldIcon,
   Loader2Icon,
+  WalletIcon,
+  TrendingUpIcon,
+  TrendingDownIcon,
+  ClockIcon,
+  PackageIcon,
 } from 'lucide-react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -20,18 +25,13 @@ import {
 } from '@/components/ui/sheet'
 
 import { getTeamDetail, getTeamMembers } from '@/services/team'
-import type { TeamVO, TeamMemberVO, TeamMemberRole, TeamType } from '@/types/team.types'
+import type { AdminPointsAccountVO, TeamMemberVO, TeamMemberRole } from '@/types/team.types'
 import { cn } from '@/lib/utils'
 
 interface TeamDetailSheetProps {
   teamId: number | null
   open: boolean
   onOpenChange: (open: boolean) => void
-}
-
-const teamTypeLabels: Record<TeamType, string> = {
-  PERSONAL_SPACE: '个人空间',
-  COLLABORATION_TEAM: '协作团队',
 }
 
 const roleLabels: Record<TeamMemberRole, string> = {
@@ -47,7 +47,7 @@ const roleIcons: Record<TeamMemberRole, typeof CrownIcon> = {
 }
 
 export function TeamDetailSheet({ teamId, open, onOpenChange }: TeamDetailSheetProps) {
-  const [team, setTeam] = useState<TeamVO | null>(null)
+  const [account, setAccount] = useState<AdminPointsAccountVO | null>(null)
   const [members, setMembers] = useState<TeamMemberVO[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -55,7 +55,7 @@ export function TeamDetailSheet({ teamId, open, onOpenChange }: TeamDetailSheetP
     if (open && teamId) {
       fetchTeamData(teamId)
     } else {
-      setTeam(null)
+      setAccount(null)
       setMembers([])
     }
   }, [open, teamId])
@@ -69,7 +69,7 @@ export function TeamDetailSheet({ teamId, open, onOpenChange }: TeamDetailSheetP
       ])
 
       if (detailRes.data.code === 'SUCCESS') {
-        setTeam(detailRes.data.data)
+        setAccount(detailRes.data.data)
       }
 
       if (membersRes.data.code === 'SUCCESS') {
@@ -84,107 +84,194 @@ export function TeamDetailSheet({ teamId, open, onOpenChange }: TeamDetailSheetP
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-md overflow-y-auto">
+      <SheetContent className="sm:max-w-lg overflow-y-auto">
         <SheetHeader>
           <SheetTitle>团队详情</SheetTitle>
-          <SheetDescription>查看团队信息和成员列表</SheetDescription>
+          <SheetDescription>查看团队信息、点数账户和成员列表</SheetDescription>
         </SheetHeader>
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
           </div>
-        ) : team ? (
+        ) : account ? (
           <div className="flex flex-col gap-6 px-4">
             {/* Team Info */}
             <div className="flex items-start gap-4">
               <Avatar className="size-16 rounded-xl">
-                {team.logoUrl ? (
-                  <AvatarImage src={team.logoUrl} alt={team.name} />
-                ) : null}
                 <AvatarFallback className="rounded-xl bg-primary/10 text-primary">
                   <UsersIcon className="size-8" />
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-1">
-                <h3 className="text-lg font-semibold">{team.name}</h3>
+                <h3 className="text-lg font-semibold">{account.teamName}</h3>
                 <Badge
                   variant="secondary"
                   className={cn(
-                    team.type === 'PERSONAL_SPACE'
-                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
-                      : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                    account.status
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                   )}
                 >
-                  {teamTypeLabels[team.type]}
+                  {account.statusDesc}
                 </Badge>
-                <span className="text-xs text-muted-foreground">ID: {team.id}</span>
+                <span className="text-xs text-muted-foreground">ID: {account.teamId}</span>
               </div>
             </div>
 
-            {/* Description */}
-            {team.description && (
-              <div className="rounded-lg bg-muted/50 p-3">
-                <p className="text-sm text-muted-foreground">{team.description}</p>
-              </div>
-            )}
-
-            {/* Details Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">所有者</span>
-                <div className="flex items-center gap-2">
-                  <Avatar className="size-5">
-                    <AvatarImage
-                      src={team.ownerAvatarUrl ?? undefined}
-                      alt={team.ownerNickname || ''}
-                    />
-                    <AvatarFallback className="text-xs">
-                      {team.ownerNickname?.charAt(0) || <UserIcon className="size-3" />}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium">
-                    {team.ownerNickname || `用户 #${team.ownerId}`}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">创建时间</span>
-                <div className="flex items-center gap-1.5">
-                  <CalendarIcon className="size-3.5 text-muted-foreground" />
-                  <span className="text-sm">
-                    {new Date(team.createTime).toLocaleDateString('zh-CN')}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">套餐</span>
+            {/* Owner Info */}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-muted-foreground">所有者</span>
+              <div className="flex items-center gap-2">
+                <Avatar className="size-5">
+                  <AvatarFallback className="text-xs">
+                    {account.ownerName?.charAt(0) || <UserIcon className="size-3" />}
+                  </AvatarFallback>
+                </Avatar>
                 <span className="text-sm font-medium">
-                  {team.planName || '无套餐'}
-                </span>
-                {team.planEndDate && (
-                  <span className="text-xs text-muted-foreground">
-                    到期: {new Date(team.planEndDate).toLocaleDateString('zh-CN')}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <span className="text-xs text-muted-foreground">可用积分</span>
-                <span className={cn(
-                  'text-sm font-medium tabular-nums',
-                  team.availablePoints && team.availablePoints > 0
-                    ? 'text-green-600 dark:text-green-400'
-                    : 'text-muted-foreground'
-                )}>
-                  {team.availablePoints?.toLocaleString() ?? '-'}
+                  {account.ownerName || `用户 #${account.ownerId}`}
                 </span>
               </div>
             </div>
 
             <Separator />
+
+            {/* Points Summary */}
+            <div className="flex flex-col gap-3">
+              <h4 className="font-medium flex items-center gap-2">
+                <WalletIcon className="size-4" />
+                点数账户
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border p-3">
+                  <span className="text-xs text-muted-foreground">可用余额</span>
+                  <p className={cn(
+                    'text-lg font-semibold tabular-nums',
+                    (account.availableBalance ?? 0) > 0
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-muted-foreground'
+                  )}>
+                    {(account.availableBalance ?? 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="rounded-lg border p-3">
+                  <span className="text-xs text-muted-foreground">冻结余额</span>
+                  <p className="text-lg font-semibold tabular-nums text-muted-foreground">
+                    {(account.frozenBalance ?? 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Points Stats */}
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <TrendingUpIcon className="size-4 text-green-500" />
+                  <span className="text-muted-foreground">累计获得:</span>
+                  <span className="font-medium tabular-nums">{(account.totalEarned ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <TrendingDownIcon className="size-4 text-red-500" />
+                  <span className="text-muted-foreground">累计消费:</span>
+                  <span className="font-medium tabular-nums">{(account.totalConsumed ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ClockIcon className="size-4 text-orange-500" />
+                  <span className="text-muted-foreground">累计过期:</span>
+                  <span className="font-medium tabular-nums">{(account.totalExpired ?? 0).toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <PackageIcon className="size-4 text-blue-500" />
+                  <span className="text-muted-foreground">累计调整:</span>
+                  <span className="font-medium tabular-nums">{(account.totalAdjusted ?? 0).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Expiring Points Warning */}
+              {(account.expiringPoints ?? 0) > 0 && (
+                <div className="rounded-lg bg-orange-50 dark:bg-orange-900/20 p-3 text-sm">
+                  <span className="text-orange-700 dark:text-orange-400">
+                    7天内即将过期: <strong>{(account.expiringPoints ?? 0).toLocaleString()}</strong> 点
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Subscription Info */}
+            <div className="flex flex-col gap-2">
+              <h4 className="font-medium">订阅信息</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">当前套餐</span>
+                  <span className="text-sm font-medium">
+                    {account.planName || '无套餐'}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">订阅状态</span>
+                  <span className="text-sm font-medium">
+                    {account.subscriptionStatusDesc || '-'}
+                  </span>
+                </div>
+                {account.planEndDate && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-muted-foreground">到期时间</span>
+                    <div className="flex items-center gap-1.5">
+                      <CalendarIcon className="size-3.5 text-muted-foreground" />
+                      <span className="text-sm">
+                        {new Date(account.planEndDate).toLocaleDateString('zh-CN')}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">创建时间</span>
+                  <div className="flex items-center gap-1.5">
+                    <CalendarIcon className="size-3.5 text-muted-foreground" />
+                    <span className="text-sm">
+                      {new Date(account.createTime).toLocaleDateString('zh-CN')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Active Batches */}
+            {account.activeBatches && account.activeBatches.length > 0 && (
+              <>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">活跃批次</h4>
+                    <Badge variant="outline">{account.activeBatchCount} 个</Badge>
+                  </div>
+                  <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                    {account.activeBatches.slice(0, 5).map((batch) => (
+                      <div
+                        key={batch.id}
+                        className="flex items-center justify-between rounded-lg border p-2 text-sm"
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">{batch.packName || batch.batchNo}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {batch.sourceDesc} · {batch.expireTime ? `到期: ${new Date(batch.expireTime).toLocaleDateString('zh-CN')}` : '永久有效'}
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-medium tabular-nums text-green-600 dark:text-green-400">
+                            {(batch.remainingPoints ?? 0).toLocaleString()}
+                          </span>
+                          <span className="text-muted-foreground"> / {(batch.totalPoints ?? 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <Separator />
+              </>
+            )}
 
             {/* Members Section */}
             <div className="flex flex-col gap-3">
