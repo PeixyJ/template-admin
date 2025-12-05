@@ -113,3 +113,4 @@ export type {
   GrantEntitlementDTO,
   BatchGrantDTO,
 } from './subscription.types'
+export * from './statistics.types'
