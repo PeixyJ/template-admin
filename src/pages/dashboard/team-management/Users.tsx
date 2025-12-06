@@ -11,7 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { UserDatatable } from '@/components/datatable'
+import { UserDatatable, type UserFilters } from '@/components/datatable'
 import { UserDetailSheet } from '@/components/user/UserDetailSheet'
 import { getUserList, updateUserStatus, resetUserPassword } from '@/services/userAdmin'
 import type { UserVO, UserListParams } from '@/types/user.types'
@@ -24,16 +24,36 @@ export default function Users() {
   const [statusDialogOpen, setStatusDialogOpen] = useState(false)
   const [userToToggle, setUserToToggle] = useState<UserVO | null>(null)
 
-  const fetchUsers = useCallback(async () => {
+  // 分页状态
+  const [pagination, setPagination] = useState({
+    current: 1,
+    size: 10,
+    total: 0,
+    pages: 0,
+  })
+
+  // 筛选条件
+  const [filters, setFilters] = useState<UserFilters>({})
+
+  const fetchUsers = useCallback(async (page = 1, size = 10, currentFilters?: UserFilters) => {
     setLoading(true)
     try {
+      const filtersToUse = currentFilters ?? filters
       const params: UserListParams = {
-        page: 1,
-        size: 100,
+        page,
+        size,
+        ...filtersToUse,
       }
       const response = await getUserList(params)
       if (response.data.code === 'SUCCESS') {
-        setUsers(response.data.data?.records || [])
+        const data = response.data.data
+        setUsers(data?.records || [])
+        setPagination({
+          current: data?.current || 1,
+          size: data?.size || 10,
+          total: data?.total || 0,
+          pages: data?.pages || 0,
+        })
       } else {
         toast.error(response.data.message || '获取用户列表失败')
       }
@@ -43,11 +63,21 @@ export default function Users() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filters])
 
   useEffect(() => {
-    fetchUsers()
-  }, [fetchUsers])
+    fetchUsers(1, pagination.size)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handlePageChange = (page: number) => {
+    fetchUsers(page, pagination.size)
+  }
+
+  const handleFiltersChange = (newFilters: UserFilters) => {
+    setFilters(newFilters)
+    // 筛选条件变化时，回到第一页
+    fetchUsers(1, pagination.size, newFilters)
+  }
 
   const handleToggleStatus = (user: UserVO) => {
     setUserToToggle(user)
@@ -110,9 +140,13 @@ export default function Users() {
         <UserDatatable
           data={users}
           loading={loading}
+          pagination={pagination}
+          filters={filters}
+          onPageChange={handlePageChange}
+          onFiltersChange={handleFiltersChange}
           onToggleStatus={handleToggleStatus}
           onResetPassword={handleResetPassword}
-          onRefresh={fetchUsers}
+          onRefresh={() => fetchUsers(pagination.current, pagination.size)}
           onUserClick={handleUserClick}
         />
       </div>

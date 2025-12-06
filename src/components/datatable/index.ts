@@ -1,5 +1,6 @@
 export { TeamDatatable } from './TeamDatatable'
+export type { TeamFilters } from '@/types/team.types'
 export { TeamDetailSheet } from './TeamDetailSheet'
-export { UserDatatable } from './UserDatatable'
+export { UserDatatable, type UserFilters } from './UserDatatable'
 export { AdminDatatable } from './AdminDatatable'
 export { NotificationTemplateDatatable } from './NotificationTemplateDatatable'

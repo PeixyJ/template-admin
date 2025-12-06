@@ -127,6 +127,18 @@ import { NumberInputWithButtons } from '@/components/shadcn-studio/input/input-4
 />
 ```
 
+### 数据表格筛选区域
+- 筛选区域使用水平排列布局: `flex flex-wrap items-center gap-3 px-6 py-4 border-b`
+- **高度统一**: 所有筛选元素高度保持一致 (`h-9`)，包括 Input、Select、Button
+- 所有输入框宽度统一使用 `w-[150px]`
+- 下拉选择器 (Select) 宽度使用 `w-[100px]`
+- 输入框使用 placeholder 提示，不需要单独的 Label
+- 支持回车键触发搜索
+- 搜索按钮放在筛选条件最后（状态下拉框右侧），使用 `size="icon"`
+- 刷新按钮放在最右侧 (`ml-auto`)，使用 `size="icon"`
+- "清除筛选"按钮使用 `variant="ghost" size="sm"`，只在有筛选条件时显示
+- 参考组件: `@/components/subscription/PlanDatatable.tsx`
+
 ## 环境变量
 ```
 VITE_API_BASE_URL=http://localhost:3000/api

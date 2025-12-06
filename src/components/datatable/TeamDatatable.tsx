@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -7,13 +7,14 @@ import {
   CalendarIcon,
   Trash2Icon,
   Loader2Icon,
+  RefreshCwIcon,
+  SearchIcon,
+  XIcon,
 } from 'lucide-react'
 
 import type {
-  Column,
   ColumnDef,
   ColumnFiltersState,
-  PaginationState,
 } from '@tanstack/react-table'
 import {
   flexRender,
@@ -28,7 +29,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Pagination,
   PaginationContent,
@@ -47,15 +54,24 @@ import {
 import { TeamDetailSheet } from './TeamDetailSheet'
 import { usePagination } from '@/hooks/use-pagination'
 import { cn } from '@/lib/utils'
-import type { TeamVO, TeamType } from '@/types/team.types'
+import type { TeamVO, TeamType, TeamFilters } from '@/types/team.types'
+
+interface PaginationInfo {
+  current: number
+  size: number
+  total: number
+  pages: number
+}
 
 interface TeamDatatableProps {
   data: TeamVO[]
   loading?: boolean
+  pagination?: PaginationInfo
+  filters?: TeamFilters
+  onPageChange?: (page: number) => void
+  onFiltersChange?: (filters: TeamFilters) => void
   onDisband?: (team: TeamVO) => void
-  pagination?: { pageIndex: number; pageSize: number }
-  totalCount?: number
-  onPaginationChange?: (pagination: { pageIndex: number; pageSize: number }) => void
+  onRefresh?: () => void
 }
 
 const teamTypeLabels: Record<TeamType, string> = {
@@ -247,82 +263,257 @@ const columns: ColumnDef<TeamVO>[] = [
 export function TeamDatatable({
   data,
   loading,
+  pagination: serverPagination,
+  filters = {},
+  onPageChange,
+  onFiltersChange,
   onDisband,
-  pagination: externalPagination,
-  totalCount,
-  onPaginationChange,
+  onRefresh,
 }: TeamDatatableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [selectedTeamId, setSelectedTeamId] = useState<number | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
-  const pageSize = 10
+
+  // 本地筛选表单状态
+  const [localFilters, setLocalFilters] = useState<TeamFilters>(filters)
 
   // 服务端分页模式
-  const isServerSide = !!externalPagination && !!onPaginationChange
-
-  const [internalPagination, setInternalPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: pageSize,
-  })
-
-  const pagination: PaginationState = isServerSide ? externalPagination : internalPagination
-
-  const handlePaginationChange = (updater: PaginationState | ((old: PaginationState) => PaginationState)) => {
-    if (isServerSide) {
-      const currentPagination = externalPagination
-      const newPagination = typeof updater === 'function' ? updater(currentPagination) : updater
-      onPaginationChange(newPagination)
-    } else {
-      setInternalPagination(updater)
-    }
-  }
+  const isServerPagination = !!serverPagination && !!onPageChange
 
   const handleTeamClick = (team: TeamVO) => {
     setSelectedTeamId(team.id)
     setSheetOpen(true)
   }
 
-  // 服务端分页时计算总页数
-  const serverSidePageCount = isServerSide && totalCount
-    ? Math.ceil(totalCount / pagination.pageSize)
-    : undefined
+  // 处理筛选表单提交
+  const handleSearch = () => {
+    const cleanedFilters: TeamFilters = {}
+    if (localFilters.teamId) cleanedFilters.teamId = localFilters.teamId
+    if (localFilters.name?.trim()) cleanedFilters.name = localFilters.name.trim()
+    if (localFilters.type) cleanedFilters.type = localFilters.type
+    if (localFilters.ownerId) cleanedFilters.ownerId = localFilters.ownerId
+    if (localFilters.disbanded !== undefined) cleanedFilters.disbanded = localFilters.disbanded
+    onFiltersChange?.(cleanedFilters)
+  }
+
+  // 重置筛选条件
+  const handleReset = () => {
+    setLocalFilters({})
+    onFiltersChange?.({})
+  }
+
+  // 检查是否有筛选条件
+  const hasFilters = Object.values(filters).some((v) => v !== undefined && v !== '')
 
   const table = useReactTable({
     data,
     columns,
     state: {
       columnFilters,
-      pagination,
+      ...(isServerPagination && {
+        pagination: {
+          pageIndex: serverPagination.current - 1,
+          pageSize: serverPagination.size,
+        },
+      }),
     },
     meta: {
       onTeamClick: handleTeamClick,
       onDisband,
     },
+    manualPagination: isServerPagination,
+    pageCount: isServerPagination ? serverPagination.pages : undefined,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: isServerSide ? undefined : getFilteredRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: isServerSide ? undefined : getPaginationRowModel(),
-    onPaginationChange: handlePaginationChange,
-    manualPagination: isServerSide,
-    pageCount: serverSidePageCount,
+    getPaginationRowModel: getPaginationRowModel(),
   })
 
-  const actualPageCount = isServerSide ? (serverSidePageCount ?? 1) : table.getPageCount()
+  const currentPage = isServerPagination
+    ? serverPagination.current
+    : table.getState().pagination.pageIndex + 1
+  const totalPages = isServerPagination
+    ? serverPagination.pages
+    : table.getPageCount()
+  const totalRecords = isServerPagination
+    ? serverPagination.total
+    : data.length
+  const pageSize = isServerPagination
+    ? serverPagination.size
+    : 10
 
   const { pages, showLeftEllipsis, showRightEllipsis } = usePagination({
-    currentPage: pagination.pageIndex + 1,
-    totalPages: actualPageCount,
+    currentPage,
+    totalPages,
     paginationItemsToDisplay: 3,
   })
+
+  const handlePreviousPage = () => {
+    if (isServerPagination) {
+      onPageChange(currentPage - 1)
+    } else {
+      table.previousPage()
+    }
+  }
+
+  const handleNextPage = () => {
+    if (isServerPagination) {
+      onPageChange(currentPage + 1)
+    } else {
+      table.nextPage()
+    }
+  }
+
+  const handleGoToPage = (page: number) => {
+    if (isServerPagination) {
+      onPageChange(page)
+    } else {
+      table.setPageIndex(page - 1)
+    }
+  }
+
+  // 处理回车键搜索
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch()
+    }
+  }
 
   return (
     <div className="w-full">
       <div className="border-b">
-        <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-6 py-3">
-          <span className="font-medium">团队列表</span>
-          <Filter column={table.getColumn('name')!} />
+        {/* 筛选区域 */}
+        <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-b">
+          {/* 团队ID */}
+          <Input
+            type="number"
+            placeholder="团队ID"
+            value={localFilters.teamId ?? ''}
+            onChange={(e) =>
+              setLocalFilters((prev) => ({
+                ...prev,
+                teamId: e.target.value ? Number(e.target.value) : undefined,
+              }))
+            }
+            onKeyDown={handleKeyDown}
+            className="w-[150px]"
+          />
+
+          {/* 团队名称 */}
+          <Input
+            placeholder="团队名称"
+            value={localFilters.name ?? ''}
+            onChange={(e) =>
+              setLocalFilters((prev) => ({
+                ...prev,
+                name: e.target.value || undefined,
+              }))
+            }
+            onKeyDown={handleKeyDown}
+            className="w-[150px]"
+          />
+
+          {/* 所有者ID */}
+          <Input
+            type="number"
+            placeholder="所有者ID"
+            value={localFilters.ownerId ?? ''}
+            onChange={(e) =>
+              setLocalFilters((prev) => ({
+                ...prev,
+                ownerId: e.target.value ? Number(e.target.value) : undefined,
+              }))
+            }
+            onKeyDown={handleKeyDown}
+            className="w-[150px]"
+          />
+
+          {/* 团队类型 */}
+          <Select
+            value={localFilters.type ?? 'all'}
+            onValueChange={(value) => {
+              const newFilters = {
+                ...localFilters,
+                type: value === 'all' ? undefined : value as TeamType,
+              }
+              setLocalFilters(newFilters)
+              // 类型变化时立即触发搜索
+              const cleanedFilters: TeamFilters = {}
+              if (newFilters.teamId) cleanedFilters.teamId = newFilters.teamId
+              if (newFilters.name?.trim()) cleanedFilters.name = newFilters.name.trim()
+              if (newFilters.type) cleanedFilters.type = newFilters.type
+              if (newFilters.ownerId) cleanedFilters.ownerId = newFilters.ownerId
+              if (newFilters.disbanded !== undefined) cleanedFilters.disbanded = newFilters.disbanded
+              onFiltersChange?.(cleanedFilters)
+            }}
+          >
+            <SelectTrigger className="w-[120px]">
+              <SelectValue placeholder="全部类型" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部类型</SelectItem>
+              <SelectItem value="PERSONAL_SPACE">个人空间</SelectItem>
+              <SelectItem value="COLLABORATION_TEAM">协作团队</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* 是否已解散 */}
+          <Select
+            value={localFilters.disbanded === undefined ? 'all' : localFilters.disbanded ? 'true' : 'false'}
+            onValueChange={(value) => {
+              const newFilters = {
+                ...localFilters,
+                disbanded: value === 'all' ? undefined : value === 'true',
+              }
+              setLocalFilters(newFilters)
+              // 状态变化时立即触发搜索
+              const cleanedFilters: TeamFilters = {}
+              if (newFilters.teamId) cleanedFilters.teamId = newFilters.teamId
+              if (newFilters.name?.trim()) cleanedFilters.name = newFilters.name.trim()
+              if (newFilters.type) cleanedFilters.type = newFilters.type
+              if (newFilters.ownerId) cleanedFilters.ownerId = newFilters.ownerId
+              if (newFilters.disbanded !== undefined) cleanedFilters.disbanded = newFilters.disbanded
+              onFiltersChange?.(cleanedFilters)
+            }}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="全部状态" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部状态</SelectItem>
+              <SelectItem value="false">正常</SelectItem>
+              <SelectItem value="true">已解散</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* 搜索按钮 */}
+          <Button size="icon" variant="outline" onClick={handleSearch}>
+            <SearchIcon className="size-4" />
+          </Button>
+
+          {/* 清除筛选 */}
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={handleReset}>
+              <XIcon className="mr-1 size-4" />
+              清除筛选
+            </Button>
+          )}
+
+          {/* 刷新按钮 */}
+          <div className="ml-auto">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onRefresh}
+              disabled={loading}
+              title="刷新"
+            >
+              <RefreshCwIcon className={cn('size-4', loading && 'animate-spin')} />
+            </Button>
+          </div>
         </div>
+
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -392,14 +583,10 @@ export function TeamDatatable({
         >
           显示{' '}
           <span>
-            {pagination.pageIndex * pagination.pageSize + 1}{' '}
-            到{' '}
-            {Math.min(
-              pagination.pageIndex * pagination.pageSize + pagination.pageSize,
-              isServerSide ? (totalCount ?? 0) : table.getRowCount()
-            )}
+            {(currentPage - 1) * pageSize + 1} 到{' '}
+            {Math.min(currentPage * pageSize, totalRecords)}
           </span>{' '}
-          条，共 <span>{isServerSide ? (totalCount ?? 0) : table.getRowCount()} 条</span>
+          条，共 <span>{totalRecords} 条</span>
         </p>
 
         <div>
@@ -409,8 +596,8 @@ export function TeamDatatable({
                 <Button
                   className="disabled:pointer-events-none disabled:opacity-50"
                   variant="ghost"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
+                  onClick={handlePreviousPage}
+                  disabled={currentPage <= 1}
                   aria-label="上一页"
                 >
                   <ChevronLeftIcon aria-hidden="true" />
@@ -425,7 +612,7 @@ export function TeamDatatable({
               )}
 
               {pages.map((page) => {
-                const isActive = page === pagination.pageIndex + 1
+                const isActive = page === currentPage
 
                 return (
                   <PaginationItem key={page}>
@@ -436,7 +623,7 @@ export function TeamDatatable({
                         !isActive &&
                           'bg-primary/10 text-primary hover:bg-primary/20'
                       )}
-                      onClick={() => table.setPageIndex(page - 1)}
+                      onClick={() => handleGoToPage(page)}
                       aria-current={isActive ? 'page' : undefined}
                     >
                       {page}
@@ -455,8 +642,8 @@ export function TeamDatatable({
                 <Button
                   className="disabled:pointer-events-none disabled:opacity-50"
                   variant="ghost"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
+                  onClick={handleNextPage}
+                  disabled={currentPage >= totalPages}
                   aria-label="下一页"
                 >
                   下一页
@@ -472,27 +659,6 @@ export function TeamDatatable({
         teamId={selectedTeamId}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
-      />
-    </div>
-  )
-}
-
-function Filter({ column }: { column: Column<TeamVO, unknown> }) {
-  const id = useId()
-  const columnFilterValue = column.getFilterValue()
-
-  return (
-    <div>
-      <Label htmlFor={`${id}-input`} className="sr-only">
-        搜索团队
-      </Label>
-      <Input
-        id={`${id}-input`}
-        value={(columnFilterValue ?? '') as string}
-        onChange={(e) => column.setFilterValue(e.target.value)}
-        placeholder="搜索团队名称..."
-        type="text"
-        className="w-[200px]"
       />
     </div>
   )

@@ -1,24 +1,22 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   UserIcon,
   CalendarIcon,
-  CheckCircleIcon,
-  BanIcon,
   Loader2Icon,
   CopyIcon,
   CheckIcon,
   RefreshCwIcon,
   KeyRoundIcon,
+  SearchIcon,
+  XIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import type {
-  Column,
   ColumnDef,
   ColumnFiltersState,
-  PaginationState,
 } from '@tanstack/react-table'
 import {
   flexRender,
@@ -40,11 +38,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Pagination,
   PaginationContent,
@@ -64,9 +68,29 @@ import { usePagination } from '@/hooks/use-pagination'
 import { cn } from '@/lib/utils'
 import type { UserVO } from '@/types/user.types'
 
+/** 筛选条件（不含分页） */
+export interface UserFilters {
+  userId?: number
+  nickname?: string
+  email?: string
+  phone?: string
+  status?: boolean
+}
+
+interface PaginationInfo {
+  current: number
+  size: number
+  total: number
+  pages: number
+}
+
 interface UserDatatableProps {
   data: UserVO[]
   loading?: boolean
+  pagination?: PaginationInfo
+  filters?: UserFilters
+  onPageChange?: (page: number) => void
+  onFiltersChange?: (filters: UserFilters) => void
   onToggleStatus?: (user: UserVO) => void
   onResetPassword?: (user: UserVO, password: string) => Promise<boolean>
   onRefresh?: () => void
@@ -115,23 +139,12 @@ const columns: ColumnDef<UserVO>[] = [
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => meta?.onUserClick?.(row.original.id)}
-                className="text-left font-medium transition-colors hover:text-primary hover:underline"
-              >
-                {row.getValue('nickname')}
-              </button>
-              <Badge
-                variant={row.original.status ? 'outline' : 'destructive'}
-                className={cn(
-                  'text-xs',
-                  row.original.status && 'border-green-500/50 bg-green-500/10 text-green-600'
-                )}
-              >
-                {row.original.statusDesc}
-              </Badge>
-            </div>
+            <button
+              onClick={() => meta?.onUserClick?.(row.original.id)}
+              className="text-left font-medium transition-colors hover:text-primary hover:underline"
+            >
+              {row.getValue('nickname')}
+            </button>
             <span className="text-xs text-muted-foreground">
               ID: {row.original.id}
             </span>
@@ -216,41 +229,40 @@ const columns: ColumnDef<UserVO>[] = [
     ),
   },
   {
+    id: 'status',
+    header: '状态',
+    cell: ({ row, table }) => {
+      const meta = table.options.meta as {
+        onToggleStatus?: (user: UserVO) => void
+      }
+      const isActive = row.original.status
+      return (
+        <Switch
+          checked={isActive}
+          onCheckedChange={() => meta?.onToggleStatus?.(row.original)}
+          aria-label={isActive ? '禁用用户' : '启用用户'}
+        />
+      )
+    },
+  },
+  {
     id: 'actions',
     header: '操作',
     cell: ({ row, table }) => {
       const meta = table.options.meta as {
-        onToggleStatus?: (user: UserVO) => void
         onOpenResetPassword?: (user: UserVO) => void
       }
-      const isActive = row.original.status
       return (
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            title="重置密码"
-            onClick={() => meta?.onOpenResetPassword?.(row.original)}
-          >
-            <KeyRoundIcon className="size-4 text-amber-600" />
-            <span className="sr-only">重置密码</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            onClick={() => meta?.onToggleStatus?.(row.original)}
-            title={isActive ? '禁用用户' : '启用用户'}
-          >
-            {isActive ? (
-              <BanIcon className="size-4 text-destructive" />
-            ) : (
-              <CheckCircleIcon className="size-4 text-green-600" />
-            )}
-            <span className="sr-only">{isActive ? '禁用' : '启用'}</span>
-          </Button>
-        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-8"
+          title="重置密码"
+          onClick={() => meta?.onOpenResetPassword?.(row.original)}
+        >
+          <KeyRoundIcon className="size-4 text-amber-600" />
+          <span className="sr-only">重置密码</span>
+        </Button>
       )
     },
   },
@@ -259,18 +271,22 @@ const columns: ColumnDef<UserVO>[] = [
 export function UserDatatable({
   data,
   loading,
+  pagination: serverPagination,
+  filters = {},
+  onPageChange,
+  onFiltersChange,
   onToggleStatus,
   onResetPassword,
   onRefresh,
   onUserClick,
 }: UserDatatableProps) {
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const pageSize = 10
 
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: pageSize,
-  })
+  // 本地筛选表单状态
+  const [localFilters, setLocalFilters] = useState<UserFilters>(filters)
+
+  // 服务端分页模式
+  const isServerPagination = !!serverPagination && !!onPageChange
 
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false)
   const [userToReset, setUserToReset] = useState<UserVO | null>(null)
@@ -310,39 +326,211 @@ export function UserDatatable({
     }
   }
 
+  // 处理筛选表单提交
+  const handleSearch = () => {
+    // 清理空值
+    const cleanedFilters: UserFilters = {}
+    if (localFilters.userId) cleanedFilters.userId = localFilters.userId
+    if (localFilters.nickname?.trim()) cleanedFilters.nickname = localFilters.nickname.trim()
+    if (localFilters.email?.trim()) cleanedFilters.email = localFilters.email.trim()
+    if (localFilters.phone?.trim()) cleanedFilters.phone = localFilters.phone.trim()
+    if (localFilters.status !== undefined) cleanedFilters.status = localFilters.status
+    onFiltersChange?.(cleanedFilters)
+  }
+
+  // 重置筛选条件
+  const handleReset = () => {
+    setLocalFilters({})
+    onFiltersChange?.({})
+  }
+
+  // 检查是否有筛选条件
+  const hasFilters = Object.values(filters).some((v) => v !== undefined && v !== '')
+
   const table = useReactTable({
     data,
     columns,
     state: {
       columnFilters,
-      pagination,
+      ...(isServerPagination && {
+        pagination: {
+          pageIndex: serverPagination.current - 1,
+          pageSize: serverPagination.size,
+        },
+      }),
     },
     meta: {
       onToggleStatus,
       onOpenResetPassword: handleOpenResetPassword,
       onUserClick,
     },
+    manualPagination: isServerPagination,
+    pageCount: isServerPagination ? serverPagination.pages : undefined,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    onPaginationChange: setPagination,
   })
 
+  const currentPage = isServerPagination
+    ? serverPagination.current
+    : table.getState().pagination.pageIndex + 1
+  const totalPages = isServerPagination
+    ? serverPagination.pages
+    : table.getPageCount()
+  const totalRecords = isServerPagination
+    ? serverPagination.total
+    : data.length
+  const pageSize = isServerPagination
+    ? serverPagination.size
+    : 10
+
   const { pages, showLeftEllipsis, showRightEllipsis } = usePagination({
-    currentPage: table.getState().pagination.pageIndex + 1,
-    totalPages: table.getPageCount(),
+    currentPage,
+    totalPages,
     paginationItemsToDisplay: 3,
   })
+
+  const handlePreviousPage = () => {
+    if (isServerPagination) {
+      onPageChange(currentPage - 1)
+    } else {
+      table.previousPage()
+    }
+  }
+
+  const handleNextPage = () => {
+    if (isServerPagination) {
+      onPageChange(currentPage + 1)
+    } else {
+      table.nextPage()
+    }
+  }
+
+  const handleGoToPage = (page: number) => {
+    if (isServerPagination) {
+      onPageChange(page)
+    } else {
+      table.setPageIndex(page - 1)
+    }
+  }
+
+  // 处理回车键搜索
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch()
+    }
+  }
 
   return (
     <div className="w-full">
       <div className="border-b">
-        <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-6 py-3">
-          <span className="font-medium">用户列表</span>
-          <div className="flex items-center gap-2">
-            <Filter column={table.getColumn('nickname')!} />
+        {/* 筛选区域 */}
+        <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-b">
+          {/* 用户ID */}
+          <Input
+            type="number"
+            placeholder="用户ID"
+            value={localFilters.userId ?? ''}
+            onChange={(e) =>
+              setLocalFilters((prev) => ({
+                ...prev,
+                userId: e.target.value ? Number(e.target.value) : undefined,
+              }))
+            }
+            onKeyDown={handleKeyDown}
+            className="w-[150px]"
+          />
+
+          {/* 用户昵称 */}
+          <Input
+            placeholder="用户昵称"
+            value={localFilters.nickname ?? ''}
+            onChange={(e) =>
+              setLocalFilters((prev) => ({
+                ...prev,
+                nickname: e.target.value || undefined,
+              }))
+            }
+            onKeyDown={handleKeyDown}
+            className="w-[150px]"
+          />
+
+          {/* 邮箱 */}
+          <Input
+            type="email"
+            placeholder="邮箱"
+            value={localFilters.email ?? ''}
+            onChange={(e) =>
+              setLocalFilters((prev) => ({
+                ...prev,
+                email: e.target.value || undefined,
+              }))
+            }
+            onKeyDown={handleKeyDown}
+            className="w-[150px]"
+          />
+
+          {/* 手机号 */}
+          <Input
+            type="tel"
+            placeholder="手机号"
+            value={localFilters.phone ?? ''}
+            onChange={(e) =>
+              setLocalFilters((prev) => ({
+                ...prev,
+                phone: e.target.value || undefined,
+              }))
+            }
+            onKeyDown={handleKeyDown}
+            className="w-[150px]"
+          />
+
+          {/* 状态 */}
+          <Select
+            value={localFilters.status === undefined ? 'all' : localFilters.status ? 'true' : 'false'}
+            onValueChange={(value) => {
+              const newFilters = {
+                ...localFilters,
+                status: value === 'all' ? undefined : value === 'true',
+              }
+              setLocalFilters(newFilters)
+              // 状态变化时立即触发搜索
+              const cleanedFilters: UserFilters = {}
+              if (newFilters.userId) cleanedFilters.userId = newFilters.userId
+              if (newFilters.nickname?.trim()) cleanedFilters.nickname = newFilters.nickname.trim()
+              if (newFilters.email?.trim()) cleanedFilters.email = newFilters.email.trim()
+              if (newFilters.phone?.trim()) cleanedFilters.phone = newFilters.phone.trim()
+              if (newFilters.status !== undefined) cleanedFilters.status = newFilters.status
+              onFiltersChange?.(cleanedFilters)
+            }}
+          >
+            <SelectTrigger className="w-[100px]">
+              <SelectValue placeholder="全部状态" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部状态</SelectItem>
+              <SelectItem value="true">正常</SelectItem>
+              <SelectItem value="false">禁用</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* 搜索按钮 */}
+          <Button size="icon" variant="outline" onClick={handleSearch}>
+            <SearchIcon className="size-4" />
+          </Button>
+
+          {/* 清除筛选 */}
+          {hasFilters && (
+            <Button variant="ghost" size="sm" onClick={handleReset}>
+              <XIcon className="mr-1 size-4" />
+              清除筛选
+            </Button>
+          )}
+
+          {/* 刷新按钮 */}
+          <div className="ml-auto">
             <Button
               variant="outline"
               size="icon"
@@ -351,10 +539,10 @@ export function UserDatatable({
               title="刷新"
             >
               <RefreshCwIcon className={cn('size-4', loading && 'animate-spin')} />
-              <span className="sr-only">刷新</span>
             </Button>
           </div>
         </div>
+
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -424,21 +612,10 @@ export function UserDatatable({
         >
           显示{' '}
           <span>
-            {table.getState().pagination.pageIndex *
-              table.getState().pagination.pageSize +
-              1}{' '}
-            到{' '}
-            {Math.min(
-              Math.max(
-                table.getState().pagination.pageIndex *
-                  table.getState().pagination.pageSize +
-                  table.getState().pagination.pageSize,
-                0
-              ),
-              table.getRowCount()
-            )}
+            {(currentPage - 1) * pageSize + 1} 到{' '}
+            {Math.min(currentPage * pageSize, totalRecords)}
           </span>{' '}
-          条，共 <span>{table.getRowCount().toString()} 条</span>
+          条，共 <span>{totalRecords} 条</span>
         </p>
 
         <div>
@@ -448,8 +625,8 @@ export function UserDatatable({
                 <Button
                   className="disabled:pointer-events-none disabled:opacity-50"
                   variant="ghost"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
+                  onClick={handlePreviousPage}
+                  disabled={currentPage <= 1}
                   aria-label="上一页"
                 >
                   <ChevronLeftIcon aria-hidden="true" />
@@ -464,8 +641,7 @@ export function UserDatatable({
               )}
 
               {pages.map((page) => {
-                const isActive =
-                  page === table.getState().pagination.pageIndex + 1
+                const isActive = page === currentPage
 
                 return (
                   <PaginationItem key={page}>
@@ -476,7 +652,7 @@ export function UserDatatable({
                         !isActive &&
                           'bg-primary/10 text-primary hover:bg-primary/20'
                       )}
-                      onClick={() => table.setPageIndex(page - 1)}
+                      onClick={() => handleGoToPage(page)}
                       aria-current={isActive ? 'page' : undefined}
                     >
                       {page}
@@ -495,8 +671,8 @@ export function UserDatatable({
                 <Button
                   className="disabled:pointer-events-none disabled:opacity-50"
                   variant="ghost"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
+                  onClick={handleNextPage}
+                  disabled={currentPage >= totalPages}
                   aria-label="下一页"
                 >
                   下一页
@@ -613,23 +789,3 @@ function CopyPasswordButton({ password }: { password: string }) {
   )
 }
 
-function Filter({ column }: { column: Column<UserVO, unknown> }) {
-  const id = useId()
-  const columnFilterValue = column.getFilterValue()
-
-  return (
-    <div>
-      <Label htmlFor={`${id}-input`} className="sr-only">
-        搜索用户
-      </Label>
-      <Input
-        id={`${id}-input`}
-        value={(columnFilterValue ?? '') as string}
-        onChange={(e) => column.setFilterValue(e.target.value)}
-        placeholder="搜索用户昵称..."
-        type="text"
-        className="w-[200px]"
-      />
-    </div>
-  )
-}

@@ -65,12 +65,8 @@ export interface PageData<T> {
   pages: number
 }
 
-/** 团队列表查询参数 */
-export interface TeamListParams {
-  /** 页码 */
-  page: number
-  /** 每页数量 */
-  size: number
+/** 团队筛选条件（不含分页） */
+export interface TeamFilters {
   /** 团队ID */
   teamId?: number
   /** 团队名称（模糊查询） */
@@ -81,6 +77,14 @@ export interface TeamListParams {
   ownerId?: number
   /** 是否已解散 */
   disbanded?: boolean
+}
+
+/** 团队列表查询参数 */
+export interface TeamListParams extends TeamFilters {
+  /** 页码 */
+  page: number
+  /** 每页数量 */
+  size: number
 }
 
 /** 团队列表响应 */
