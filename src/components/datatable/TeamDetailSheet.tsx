@@ -24,8 +24,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 
-import { getTeamDetail, getTeamMembers } from '@/services/team'
-import type { AdminPointsAccountVO, TeamMemberVO, TeamMemberRole } from '@/types/team.types'
+import { getTeamInfo, getTeamDetail, getTeamMembers } from '@/services/team'
+import type { AdminPointsAccountVO, TeamMemberVO, TeamMemberRole, TeamVO } from '@/types/team.types'
 import { cn } from '@/lib/utils'
 
 interface TeamDetailSheetProps {
@@ -47,6 +47,7 @@ const roleIcons: Record<TeamMemberRole, typeof CrownIcon> = {
 }
 
 export function TeamDetailSheet({ teamId, open, onOpenChange }: TeamDetailSheetProps) {
+  const [teamInfo, setTeamInfo] = useState<TeamVO | null>(null)
   const [account, setAccount] = useState<AdminPointsAccountVO | null>(null)
   const [members, setMembers] = useState<TeamMemberVO[]>([])
   const [loading, setLoading] = useState(false)
@@ -55,6 +56,7 @@ export function TeamDetailSheet({ teamId, open, onOpenChange }: TeamDetailSheetP
     if (open && teamId) {
       fetchTeamData(teamId)
     } else {
+      setTeamInfo(null)
       setAccount(null)
       setMembers([])
     }
@@ -63,10 +65,15 @@ export function TeamDetailSheet({ teamId, open, onOpenChange }: TeamDetailSheetP
   const fetchTeamData = async (id: number) => {
     setLoading(true)
     try {
-      const [detailRes, membersRes] = await Promise.all([
+      const [teamInfoRes, detailRes, membersRes] = await Promise.all([
+        getTeamInfo(id),
         getTeamDetail(id),
         getTeamMembers(id),
       ])
+
+      if (teamInfoRes.data.code === 'SUCCESS') {
+        setTeamInfo(teamInfoRes.data.data)
+      }
 
       if (detailRes.data.code === 'SUCCESS') {
         setAccount(detailRes.data.data)
@@ -94,47 +101,118 @@ export function TeamDetailSheet({ teamId, open, onOpenChange }: TeamDetailSheetP
           <div className="flex items-center justify-center py-12">
             <Loader2Icon className="size-6 animate-spin text-muted-foreground" />
           </div>
-        ) : account ? (
+        ) : teamInfo ? (
           <div className="flex flex-col gap-6 px-4">
-            {/* Team Info */}
+            {/* Team Basic Info */}
             <div className="flex items-start gap-4">
               <Avatar className="size-16 rounded-xl">
+                <AvatarImage src={teamInfo.logoUrl ?? undefined} alt={teamInfo.name} className="rounded-xl" />
                 <AvatarFallback className="rounded-xl bg-primary/10 text-primary">
                   <UsersIcon className="size-8" />
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col gap-1">
-                <h3 className="text-lg font-semibold">{account.teamName}</h3>
+                <h3 className="text-lg font-semibold">{teamInfo.name}</h3>
                 <Badge
                   variant="secondary"
                   className={cn(
-                    account.status
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    teamInfo.type === 'PERSONAL_SPACE'
+                      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400'
+                      : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                   )}
                 >
-                  {account.statusDesc}
+                  {teamInfo.type === 'PERSONAL_SPACE' ? '个人空间' : '协作团队'}
                 </Badge>
-                <span className="text-xs text-muted-foreground">ID: {account.teamId}</span>
+                <span className="text-xs text-muted-foreground">ID: {teamInfo.id}</span>
               </div>
             </div>
+
+            {/* Team Description */}
+            {teamInfo.description && (
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">团队描述</span>
+                <p className="text-sm text-foreground">{teamInfo.description}</p>
+              </div>
+            )}
 
             {/* Owner Info */}
             <div className="flex flex-col gap-1">
               <span className="text-xs text-muted-foreground">所有者</span>
               <div className="flex items-center gap-2">
                 <Avatar className="size-5">
+                  <AvatarImage src={teamInfo.ownerAvatarUrl ?? undefined} alt={teamInfo.ownerNickname || ''} />
                   <AvatarFallback className="text-xs">
-                    {account.ownerName?.charAt(0) || <UserIcon className="size-3" />}
+                    {teamInfo.ownerNickname?.charAt(0) || <UserIcon className="size-3" />}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium">
-                  {account.ownerName || `用户 #${account.ownerId}`}
+                  {teamInfo.ownerNickname || `用户 #${teamInfo.ownerId}`}
                 </span>
               </div>
             </div>
 
+            {/* Team Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">当前套餐</span>
+                <span className="text-sm font-medium">
+                  {teamInfo.planName || '无套餐'}
+                </span>
+              </div>
+              {teamInfo.planEndDate && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs text-muted-foreground">套餐到期</span>
+                  <div className="flex items-center gap-1.5">
+                    <CalendarIcon className="size-3.5 text-muted-foreground" />
+                    <span className="text-sm">
+                      {new Date(teamInfo.planEndDate).toLocaleDateString('zh-CN')}
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">可用积分</span>
+                <span className={cn(
+                  'text-sm font-medium tabular-nums',
+                  (teamInfo.availablePoints ?? 0) > 0
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-muted-foreground'
+                )}>
+                  {teamInfo.availablePoints !== null ? teamInfo.availablePoints.toLocaleString() : '-'}
+                </span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-xs text-muted-foreground">创建时间</span>
+                <div className="flex items-center gap-1.5">
+                  <CalendarIcon className="size-3.5 text-muted-foreground" />
+                  <span className="text-sm">
+                    {new Date(teamInfo.createTime).toLocaleDateString('zh-CN')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <Separator />
+
+            {/* Points Account Details (if available) */}
+            {account && (
+              <>
+                {/* Account Status */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">账户状态</span>
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      account.status
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    )}
+                  >
+                    {account.statusDesc}
+                  </Badge>
+                </div>
+
+                <Separator />
 
             {/* Points Summary */}
             <div className="flex flex-col gap-3">
@@ -273,62 +351,64 @@ export function TeamDetailSheet({ teamId, open, onOpenChange }: TeamDetailSheetP
               </>
             )}
 
-            {/* Members Section */}
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <h4 className="font-medium">团队成员</h4>
-                <Badge variant="outline">{members.length} 人</Badge>
-              </div>
+                {/* Members Section */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">团队成员</h4>
+                    <Badge variant="outline">{members.length} 人</Badge>
+                  </div>
 
-              {members.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  {members.map((member) => {
-                    const RoleIcon = roleIcons[member.role]
-                    return (
-                      <div
-                        key={member.id}
-                        className="flex items-center justify-between rounded-lg border p-3"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar className="size-9">
-                            <AvatarImage
-                              src={member.user.avatarUrl ?? undefined}
-                              alt={member.user.nickname}
-                            />
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {member.user.nickname.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-medium">
-                              {member.user.nickname}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(member.joinedTime).toLocaleDateString('zh-CN')} 加入
-                            </span>
+                  {members.length > 0 ? (
+                    <div className="flex flex-col gap-2">
+                      {members.map((member) => {
+                        const RoleIcon = roleIcons[member.role]
+                        return (
+                          <div
+                            key={member.id}
+                            className="flex items-center justify-between rounded-lg border p-3"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="size-9">
+                                <AvatarImage
+                                  src={member.user.avatarUrl ?? undefined}
+                                  alt={member.user.nickname}
+                                />
+                                <AvatarFallback className="bg-primary/10 text-primary">
+                                  {member.user.nickname.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium">
+                                  {member.user.nickname}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Date(member.joinedTime).toLocaleDateString('zh-CN')} 加入
+                                </span>
+                              </div>
+                            </div>
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                'flex items-center gap-1',
+                                member.role === 'OWNER' && 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+                                member.role === 'ADMIN' && 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                              )}
+                            >
+                              <RoleIcon className="size-3" />
+                              {roleLabels[member.role]}
+                            </Badge>
                           </div>
-                        </div>
-                        <Badge
-                          variant="secondary"
-                          className={cn(
-                            'flex items-center gap-1',
-                            member.role === 'OWNER' && 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
-                            member.role === 'ADMIN' && 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
-                          )}
-                        >
-                          <RoleIcon className="size-3" />
-                          {roleLabels[member.role]}
-                        </Badge>
-                      </div>
-                    )
-                  })}
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                      暂无成员
+                    </div>
+                  )}
                 </div>
-              ) : (
-                <div className="py-6 text-center text-sm text-muted-foreground">
-                  暂无成员
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="py-12 text-center text-sm text-muted-foreground">

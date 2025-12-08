@@ -70,6 +70,7 @@ export const navMainConfig: NavMainItem[] = [
     icon: Bell,
     items: [
       { title: '通知模板', url: '/dashboard/notification-management/templates' },
+      { title: '通知查询', url: '/dashboard/notification-management/notifications' },
     ],
   },
   {

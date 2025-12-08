@@ -1,69 +1,71 @@
 import type { ApiResult } from './auth.types'
 import type { PageData } from './team.types'
 
-/** 操作按钮配置 */
-export interface ActionConfig {
-  /** 操作标识 */
-  actionKey: string
-  /** 按钮文字 */
-  label: string
-  /** 样式: primary/secondary/danger/success */
-  style: 'primary' | 'secondary' | 'danger' | 'success'
-  /** 类型: endpoint(调接口) / redirect(跳转) */
-  actionType: 'endpoint' | 'redirect'
-  /** HTTP方法 */
-  endpointMethod?: string
-  /** URL模板 (endpoint类型) */
-  endpointUrlPattern?: string
-  /** 跳转URL模板 (redirect类型) */
-  redirectUrlPattern?: string
-  /** 是否需要确认 */
-  confirmRequired: boolean
-  /** 确认框标题 */
-  confirmTitle?: string
-  /** 确认框内容 */
-  confirmMessage?: string
-}
-
-/** 参数说明 */
-export interface ParamSchema {
-  /** 参数名 */
-  name: string
-  /** 类型: string/number/boolean */
-  type: 'string' | 'number' | 'boolean'
-  /** 描述 */
-  desc: string
+/** 模板参数定义 */
+export interface TemplateParam {
+  /** 参数键名 */
+  paramKey: string
+  /** 参数类型: string/number/boolean/object/array */
+  paramType: 'string' | 'number' | 'boolean' | 'object' | 'array'
+  /** 参数描述 */
+  description: string
   /** 是否必填 */
   required: boolean
+  /** 默认值 */
+  defaultValue?: string
+  /** 排序 */
+  sortOrder: number
 }
 
-/** 模板状态 */
-export type TemplateStatus = 'active' | 'inactive'
+/** 按钮样式 */
+export type ButtonStyle = 'PRIMARY' | 'DANGER' | 'DEFAULT'
+
+/** 按钮调用类型 */
+export type ButtonActionType = 'API' | 'REDIRECT' | 'BEAN'
+
+/** 模板按钮配置 */
+export interface TemplateButton {
+  /** 按钮标识 */
+  buttonKey: string
+  /** 按钮文本 */
+  label: string
+  /** 按钮样式: PRIMARY/DANGER/DEFAULT */
+  style: ButtonStyle
+  /** 调用类型: API/REDIRECT/BEAN */
+  actionType: ButtonActionType
+  /** 调用配置（JSON对象，根据 actionType 不同结构不同） */
+  actionConfig?: Record<string, unknown>
+  /** 排序 */
+  sortOrder: number
+  /** 显示条件表达式(SpEL) */
+  conditionExpr?: string
+}
+
+/** 大分类类型 */
+export type ParentType = 'INBOX' | 'SYSTEM'
 
 /** 模板列表视图对象 */
-export interface TemplateListVO {
+export interface TemplateVO {
   /** 主键ID */
   id: number
   /** 模板编码 */
   code: string
   /** 模板名称 */
   name: string
-  /** 通知类型 */
-  type: string
-  /** 通知类型名称 */
-  typeName: string
+  /** 大分类: INBOX/SYSTEM */
+  parentType: ParentType
+  /** 大分类描述 */
+  parentTypeDesc: string
+  /** 过期天数 */
+  expireDays: number
   /** 状态 */
-  status: TemplateStatus
-  /** 是否系统模板 */
-  isSystem: boolean
-  /** 描述 */
-  description: string | null
+  status: boolean
+  /** 状态描述 */
+  statusDesc: string
   /** 创建时间 */
   createTime: string
   /** 更新时间 */
   updateTime: string
-  /** 数据版本 */
-  dataVersion: number
 }
 
 /** 模板详情视图对象 */
@@ -74,84 +76,72 @@ export interface TemplateDetailVO {
   code: string
   /** 模板名称 */
   name: string
-  /** 通知类型 */
-  type: string
-  /** 通知类型名称 */
-  typeName: string
-  /** 状态 */
-  status: TemplateStatus
-  /** 是否系统模板 */
-  isSystem: boolean
-  /** 描述 */
-  description: string | null
+  /** 大分类: INBOX/SYSTEM */
+  parentType: ParentType
+  /** 大分类描述 */
+  parentTypeDesc: string
   /** 标题模板 */
   titleTemplate: string
   /** 内容模板 */
   contentTemplate: string
-  /** 默认操作按钮 */
-  defaultActions: ActionConfig[]
-  /** 参数说明 */
-  paramSchema: ParamSchema[]
+  /** 模板参数定义 */
+  params: TemplateParam[]
+  /** 按钮配置列表 */
+  buttons: TemplateButton[]
+  /** 过期天数 */
+  expireDays: number
+  /** 状态 */
+  status: boolean
+  /** 状态描述 */
+  statusDesc: string
+  /** 数据版本 */
+  dataVersion: number
   /** 创建时间 */
   createTime: string
   /** 更新时间 */
   updateTime: string
-  /** 数据版本 */
-  dataVersion: number
 }
 
-/** 模板下拉选项 */
-export interface TemplateOptionVO {
-  /** 模板编码 */
-  code: string
-  /** 模板名称 */
-  name: string
-}
-
-/** 渲染后的操作按钮 */
-export interface RenderedActionVO {
-  /** 操作标识 */
-  actionKey: string
-  /** 按钮文字 */
+/** 通知按钮VO（用于预览和通知展示） */
+export interface ButtonVO {
+  /** 按钮标识 */
+  buttonKey: string
+  /** 按钮文本 */
   label: string
-  /** 样式 */
+  /** 按钮样式 */
   style: string
-  /** 操作类型 */
+  /** 调用类型 */
   actionType: string
-  /** 渲染后的接口URL (endpoint类型) */
-  endpointUrl?: string
-  /** HTTP方法 (endpoint类型) */
-  endpointMethod?: string
-  /** 渲染后的跳转URL (redirect类型) */
-  redirectUrl?: string
-  /** 是否需要确认 */
-  confirmRequired: boolean
-  /** 确认框标题 */
-  confirmTitle?: string
-  /** 确认框内容 */
-  confirmMessage?: string
+  /** 排序 */
+  sortOrder: number
 }
 
-/** 模板预览视图对象 */
-export interface TemplatePreviewVO {
+/** 通知视图对象（预览返回） */
+export interface NotificationVO {
+  /** 通知ID */
+  id: number
+  /** 大分类 */
+  parentType: string
+  /** 大分类描述 */
+  parentTypeDesc: string
   /** 渲染后的标题 */
   title: string
-  /** 渲染后的内容 */
+  /** 渲染后的内容（支持HTML） */
   content: string
-  /** 渲染后的操作按钮 */
-  actions: RenderedActionVO[]
-}
-
-/** 模板验证视图对象 */
-export interface TemplateValidateVO {
-  /** 是否有效 */
-  valid: boolean
-  /** 标题模板错误信息 */
-  titleError?: string
-  /** 内容模板错误信息 */
-  contentError?: string
-  /** 提取的变量列表 */
-  variables: string[]
+  /** 发送者类型 */
+  senderType: string
+  /** 发送者名称 */
+  senderName: string
+  /** 通知状态: unread/read/acted/expired */
+  status: string
+  /** 状态描述 */
+  statusDesc: string
+  /** 按钮列表 */
+  buttons: ButtonVO[]
+  /** 创建时间 */
+  createTime: string
+  /** 阅读时间 */
+  readTime?: string
 }
 
 /** 模板列表查询参数 */
@@ -160,16 +150,8 @@ export interface TemplateListParams {
   page: number
   /** 每页数量 */
   size: number
-  /** 模板编码（模糊匹配） */
-  code?: string
-  /** 模板名称（模糊匹配） */
-  name?: string
-  /** 通知类型 */
-  type?: string
-  /** 状态 active/inactive */
-  status?: TemplateStatus
-  /** 是否系统模板 */
-  isSystem?: boolean
+  /** 关键字搜索 */
+  keyword?: string
 }
 
 /** 创建模板请求 */
@@ -178,95 +160,72 @@ export interface CreateTemplateDTO {
   code: string
   /** 模板名称（2-100字符） */
   name: string
-  /** 描述（最大500字符） */
-  description?: string
-  /** 通知类型（必填） */
-  type: string
+  /** 大分类: INBOX/SYSTEM */
+  parentType: ParentType
   /** 标题模板（FreeMarker语法，最大500字符） */
   titleTemplate: string
   /** 内容模板（FreeMarker语法） */
   contentTemplate: string
-  /** 默认操作按钮 */
-  defaultActions?: ActionConfig[]
-  /** 参数说明 */
-  paramSchema?: ParamSchema[]
+  /** 模板参数定义 */
+  params?: TemplateParam[]
+  /** 按钮配置列表 */
+  buttons?: TemplateButton[]
+  /** 通知过期天数，0表示永不过期 */
+  expireDays?: number
+  /** 状态: true-启用, false-禁用 */
+  status?: boolean
 }
 
 /** 更新模板请求 */
 export interface UpdateTemplateDTO {
   /** 模板名称（2-100字符） */
-  name: string
-  /** 描述（最大500字符） */
-  description?: string
+  name?: string
+  /** 大分类: INBOX/SYSTEM */
+  parentType?: ParentType
   /** 标题模板（FreeMarker语法，最大500字符） */
-  titleTemplate: string
+  titleTemplate?: string
   /** 内容模板（FreeMarker语法） */
-  contentTemplate: string
-  /** 默认操作按钮 */
-  defaultActions?: ActionConfig[]
-  /** 参数说明 */
-  paramSchema?: ParamSchema[]
+  contentTemplate?: string
+  /** 模板参数定义 */
+  params?: TemplateParam[]
+  /** 按钮配置列表 */
+  buttons?: TemplateButton[]
+  /** 通知过期天数，0表示永不过期 */
+  expireDays?: number
+  /** 状态: true-启用, false-禁用 */
+  status?: boolean
   /** 数据版本（乐观锁） */
   dataVersion: number
 }
 
-/** 更新模板状态请求 */
-export interface UpdateTemplateStatusDTO {
-  /** 状态: active/inactive */
-  status: 'ACTIVE' | 'INACTIVE'
-}
-
-/** 预览模板请求 */
-export interface PreviewTemplateDTO {
+/** 管理员发送通知请求 */
+export interface AdminSendNotificationDTO {
+  /** 模板编码 */
+  templateCode: string
+  /** 接收用户ID（单个发送时使用） */
+  userId?: number
+  /** 接收用户ID列表（批量发送时使用） */
+  userIds?: number[]
+  /** 所属团队ID（可选） */
+  teamId?: number
   /** 模板参数 */
   params?: Record<string, unknown>
 }
 
-/** 验证模板请求 */
-export interface ValidateTemplateDTO {
-  /** 标题模板 */
-  titleTemplate?: string
-  /** 内容模板 */
-  contentTemplate?: string
-}
-
-/** 发送通知请求 */
-export interface SendNotificationDTO {
-  /** 目标用户ID列表 */
-  userIds: number[]
-  /** 通知类型（与模板二选一） */
-  type?: string
-  /** 模板编码（与type+title/content二选一） */
-  templateCode?: string
-  /** 模板参数（使用模板时需要） */
-  templateParams?: Record<string, unknown>
-  /** 自定义标题（不使用模板时需要） */
-  title?: string
-  /** 自定义内容（不使用模板时需要） */
-  content?: string
-  /** 过期时间（可选） */
-  expiresAt?: string
-  /** 过期天数（可选，与expiresAt二选一） */
-  expiresInDays?: number
-}
-
 /** 模板列表响应 */
-export type TemplateListResponse = ApiResult<PageData<TemplateListVO>>
+export type TemplateListResponse = ApiResult<PageData<TemplateVO>>
 
 /** 模板详情响应 */
 export type TemplateDetailResponse = ApiResult<TemplateDetailVO>
 
-/** 模板下拉选项响应 */
-export type TemplateOptionsResponse = ApiResult<TemplateOptionVO[]>
-
-/** 模板预览响应 */
-export type TemplatePreviewResponse = ApiResult<TemplatePreviewVO>
-
-/** 模板验证响应 */
-export type TemplateValidateResponse = ApiResult<TemplateValidateVO>
-
-/** 发送通知响应 */
-export type SendNotificationResponse = ApiResult<number[]>
+/** 通知预览响应 */
+export type NotificationPreviewResponse = ApiResult<NotificationVO>
 
 /** 创建模板响应 */
 export type CreateTemplateResponse = ApiResult<number>
+
+/** 发送通知响应 */
+export type SendNotificationResponse = ApiResult<number>
+
+/** 批量发送通知响应 */
+export type BatchSendNotificationResponse = ApiResult<number[]>

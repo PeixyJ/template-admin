@@ -1,5 +1,17 @@
 # CLAUDE.md - 项目规范
 
+## 计划与审查  
+  
+### 开始工作前  
+- 编写计划并保存到 `.claude/tasks/TASK_NAME.md`。  
+- 计划应包括详细的实现方法、关键决策背后的理由以及任务分解。  
+- 专注于最小可行产品（MVP），避免过度规划。  
+- 计划编写完成后，提交审查，在批准之前不要继续进行。  
+  
+### 实施过程中  
+- 随着工作进展持续更新计划。  
+- 每完成一个任务后，附加详细的变更描述，以确保顺利交接给其他工程师。
+
 ## 项目概述
 基于 React 的后台管理模板，使用 TypeScript、Tailwind CSS v4、Redux Toolkit、React Router 和 Shadcn UI 组件。
 
@@ -11,6 +23,7 @@
 - **路由**: React Router DOM v7
 - **UI 组件**: Shadcn UI (手动配置 CVA)
 - **HTTP 客户端**: Axios
+
 
 ## 目录结构
 ```
@@ -97,8 +110,10 @@ pnpm preview  # 预览生产构建
 ## 添加新功能
 
 ### 新页面
-1. 在 `src/pages/` 创建组件
-2. 在 `src/router/index.tsx` 添加路由
+1. 在 `src/pages/` 创建页面组件
+2. 在对应模块的 `index.ts` 中导出页面
+3. 在 `src/config/routes.tsx` 添加路由配置
+4. 在 `src/config/navigation.ts` 添加导航菜单项
 
 ### 新 Redux Slice
 1. 在 `src/store/` 或 `src/features/[feature]/` 创建 slice
@@ -130,7 +145,7 @@ import { NumberInputWithButtons } from '@/components/shadcn-studio/input/input-4
 ### 数据表格筛选区域
 - 筛选区域使用水平排列布局: `flex flex-wrap items-center gap-3 px-6 py-4 border-b`
 - **高度统一**: 所有筛选元素高度保持一致 (`h-9`)，包括 Input、Select、Button
-- 所有输入框宽度统一使用 `w-[150px]`
+- 所有输入框宽度统一使用 `w-48`
 - 下拉选择器 (Select) 宽度使用 `w-[100px]`
 - 输入框使用 placeholder 提示，不需要单独的 Label
 - 支持回车键触发搜索

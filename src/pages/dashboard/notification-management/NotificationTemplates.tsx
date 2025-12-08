@@ -7,37 +7,39 @@ import {
   deleteTemplate,
   updateTemplateStatus,
 } from '@/services/notification-template'
-import type { TemplateListVO, TemplateListParams } from '@/types/notification-template.types'
+import type { TemplateVO, TemplateListParams } from '@/types/notification-template.types'
 import { CreateTemplateDialog } from '@/components/notification-template/CreateTemplateDialog'
 import { EditTemplateDialog } from '@/components/notification-template/EditTemplateDialog'
 import { TemplateDetailSheet } from '@/components/notification-template/TemplateDetailSheet'
 import { SendNotificationDialog } from '@/components/notification-template/SendNotificationDialog'
 
 export default function NotificationTemplates() {
-  const [templates, setTemplates] = useState<TemplateListVO[]>([])
+  const [templates, setTemplates] = useState<TemplateVO[]>([])
   const [loading, setLoading] = useState(false)
+  const [keyword, setKeyword] = useState('')
 
   // Create dialog state
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false)
-  const [templateToEdit, setTemplateToEdit] = useState<TemplateListVO | null>(null)
+  const [templateToEdit, setTemplateToEdit] = useState<TemplateVO | null>(null)
 
   // Detail sheet state
   const [detailSheetOpen, setDetailSheetOpen] = useState(false)
-  const [templateToView, setTemplateToView] = useState<TemplateListVO | null>(null)
+  const [templateToView, setTemplateToView] = useState<TemplateVO | null>(null)
 
   // Send notification dialog state
   const [sendDialogOpen, setSendDialogOpen] = useState(false)
-  const [templateToSend, setTemplateToSend] = useState<TemplateListVO | null>(null)
+  const [templateToSend, setTemplateToSend] = useState<TemplateVO | null>(null)
 
-  const fetchTemplates = useCallback(async () => {
+  const fetchTemplates = useCallback(async (searchKeyword?: string) => {
     setLoading(true)
     try {
       const params: TemplateListParams = {
         page: 1,
         size: 100,
+        keyword: searchKeyword || keyword || undefined,
       }
       const response = await getTemplateList(params)
       if (response.data.code === 'SUCCESS') {
@@ -51,28 +53,33 @@ export default function NotificationTemplates() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [keyword])
 
   useEffect(() => {
     fetchTemplates()
-  }, [fetchTemplates])
+  }, [])
 
-  const handleView = (template: TemplateListVO) => {
+  const handleSearch = (searchKeyword: string) => {
+    setKeyword(searchKeyword)
+    fetchTemplates(searchKeyword)
+  }
+
+  const handleView = (template: TemplateVO) => {
     setTemplateToView(template)
     setDetailSheetOpen(true)
   }
 
-  const handleEdit = (template: TemplateListVO) => {
+  const handleEdit = (template: TemplateVO) => {
     setTemplateToEdit(template)
     setEditDialogOpen(true)
   }
 
-  const handleSendNotification = (template: TemplateListVO) => {
+  const handleSendNotification = (template: TemplateVO) => {
     setTemplateToSend(template)
     setSendDialogOpen(true)
   }
 
-  const handleDelete = async (template: TemplateListVO) => {
+  const handleDelete = async (template: TemplateVO) => {
     try {
       const response = await deleteTemplate(template.id)
       if (response.data.code === 'SUCCESS') {
@@ -87,12 +94,12 @@ export default function NotificationTemplates() {
     }
   }
 
-  const handleToggleStatus = async (template: TemplateListVO) => {
-    const newStatus = template.status === 'active' ? 'INACTIVE' : 'ACTIVE'
-    const action = newStatus === 'ACTIVE' ? '启用' : '禁用'
+  const handleToggleStatus = async (template: TemplateVO) => {
+    const newStatus = !template.status
+    const action = newStatus ? '启用' : '禁用'
 
     try {
-      const response = await updateTemplateStatus(template.id, { status: newStatus })
+      const response = await updateTemplateStatus(template.id, newStatus)
       if (response.data.code === 'SUCCESS') {
         toast.success(`模板 "${template.name}" 已${action}`)
         fetchTemplates()
@@ -116,22 +123,23 @@ export default function NotificationTemplates() {
           onEdit={handleEdit}
           onView={handleView}
           onSendNotification={handleSendNotification}
-          onRefresh={fetchTemplates}
+          onRefresh={() => fetchTemplates()}
           onCreateClick={() => setCreateDialogOpen(true)}
+          onSearch={handleSearch}
         />
       </div>
 
       <CreateTemplateDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        onSuccess={fetchTemplates}
+        onSuccess={() => fetchTemplates()}
       />
 
       <EditTemplateDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         template={templateToEdit}
-        onSuccess={fetchTemplates}
+        onSuccess={() => fetchTemplates()}
       />
 
       <TemplateDetailSheet

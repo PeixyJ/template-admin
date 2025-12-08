@@ -31,6 +31,8 @@ export interface TeamVO {
   isDefault: boolean | null
   /** 套餐名称 */
   planName: string | null
+  /** 套餐等级 (0-10) */
+  planLevel: number | null
   /** 套餐到期日期 */
   planEndDate: string | null
   /** 可用积分 */
@@ -178,10 +180,14 @@ export interface AdminPointsAccountVO {
   teamId: number
   /** 团队名称 */
   teamName: string
+  /** 团队Logo */
+  logoUrl: string | null
   /** 团队所有者ID */
   ownerId: number
   /** 团队所有者名称 */
   ownerName: string
+  /** 团队所有者头像 */
+  ownerAvatarUrl: string | null
   /** 总余额 */
   totalBalance: number
   /** 可用余额 */

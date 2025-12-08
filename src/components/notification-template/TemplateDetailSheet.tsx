@@ -6,8 +6,7 @@ import {
   CheckIcon,
   CodeIcon,
   FileTextIcon,
-  LockIcon,
-  PlayIcon,
+  ClockIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -23,11 +22,11 @@ import {
 import { Separator } from '@/components/ui/separator'
 
 import { getTemplateDetail } from '@/services/notification-template'
-import type { TemplateListVO, TemplateDetailVO } from '@/types/notification-template.types'
+import type { TemplateVO, TemplateDetailVO } from '@/types/notification-template.types'
 import { cn } from '@/lib/utils'
 
 interface TemplateDetailSheetProps {
-  template: TemplateListVO | null
+  template: TemplateVO | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -58,6 +57,30 @@ export function TemplateDetailSheet({
     }
   }
 
+  const getButtonVariant = (style: string) => {
+    switch (style) {
+      case 'PRIMARY':
+        return 'default'
+      case 'DANGER':
+        return 'destructive'
+      default:
+        return 'secondary'
+    }
+  }
+
+  const getActionTypeLabel = (actionType: string) => {
+    switch (actionType) {
+      case 'API':
+        return '调接口'
+      case 'REDIRECT':
+        return '跳转'
+      case 'BEAN':
+        return 'Bean调用'
+      default:
+        return actionType
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-lg">
@@ -74,31 +97,28 @@ export function TemplateDetailSheet({
           <div className="flex flex-col gap-6 px-4">
             {/* 基本信息 */}
             <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-semibold">{templateDetail.name}</span>
-                {templateDetail.isSystem && (
-                  <Badge variant="secondary">
-                    <LockIcon className="mr-1 size-3" />
-                    系统
-                  </Badge>
-                )}
-              </div>
+              <span className="text-lg font-semibold">{templateDetail.name}</span>
               <CopyableText
                 label="编码"
                 value={templateDetail.code}
                 className="font-mono text-sm text-muted-foreground"
               />
               <div className="flex items-center gap-2">
-                <Badge variant="outline">{templateDetail.typeName}</Badge>
+                <Badge variant="outline">{templateDetail.parentTypeDesc}</Badge>
                 <Badge
-                  variant={templateDetail.status === 'active' ? 'default' : 'destructive'}
+                  variant={templateDetail.status ? 'default' : 'destructive'}
                 >
-                  {templateDetail.status === 'active' ? '启用' : '禁用'}
+                  {templateDetail.statusDesc || (templateDetail.status ? '启用' : '禁用')}
                 </Badge>
               </div>
-              {templateDetail.description && (
-                <p className="text-sm text-muted-foreground">{templateDetail.description}</p>
-              )}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ClockIcon className="size-4" />
+                <span>
+                  {templateDetail.expireDays === 0
+                    ? '永不过期'
+                    : `${templateDetail.expireDays} 天后过期`}
+                </span>
+              </div>
             </div>
 
             <Separator />
@@ -128,23 +148,23 @@ export function TemplateDetailSheet({
               </div>
             </div>
 
-            {/* 参数说明 */}
-            {templateDetail.paramSchema && templateDetail.paramSchema.length > 0 && (
+            {/* 参数定义 */}
+            {templateDetail.params && templateDetail.params.length > 0 && (
               <>
                 <Separator />
                 <div className="flex flex-col gap-3">
-                  <h4 className="font-medium">参数说明</h4>
+                  <h4 className="font-medium">参数定义</h4>
                   <div className="flex flex-col gap-2">
-                    {templateDetail.paramSchema.map((param, index) => (
+                    {templateDetail.params.map((param, index) => (
                       <div
                         key={index}
                         className="flex items-start justify-between rounded-lg border p-3"
                       >
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
-                            <code className="text-sm font-medium">{param.name}</code>
+                            <code className="text-sm font-medium">{param.paramKey}</code>
                             <Badge variant="outline" className="text-xs">
-                              {param.type}
+                              {param.paramType}
                             </Badge>
                             {param.required && (
                               <Badge variant="destructive" className="text-xs">
@@ -152,8 +172,13 @@ export function TemplateDetailSheet({
                               </Badge>
                             )}
                           </div>
-                          {param.desc && (
-                            <span className="text-xs text-muted-foreground">{param.desc}</span>
+                          {param.description && (
+                            <span className="text-xs text-muted-foreground">{param.description}</span>
+                          )}
+                          {param.defaultValue && (
+                            <span className="text-xs text-muted-foreground">
+                              默认值: {param.defaultValue}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -163,52 +188,35 @@ export function TemplateDetailSheet({
               </>
             )}
 
-            {/* 操作按钮 */}
-            {templateDetail.defaultActions && templateDetail.defaultActions.length > 0 && (
+            {/* 按钮配置 */}
+            {templateDetail.buttons && templateDetail.buttons.length > 0 && (
               <>
                 <Separator />
                 <div className="flex flex-col gap-3">
-                  <h4 className="font-medium">操作按钮</h4>
+                  <h4 className="font-medium">按钮配置</h4>
                   <div className="flex flex-col gap-2">
-                    {templateDetail.defaultActions.map((action, index) => (
+                    {templateDetail.buttons.map((button, index) => (
                       <div
                         key={index}
                         className="flex flex-col gap-2 rounded-lg border p-3"
                       >
                         <div className="flex items-center gap-2">
                           <Button
-                            variant={
-                              action.style === 'primary' ? 'default' :
-                              action.style === 'danger' ? 'destructive' :
-                              action.style === 'success' ? 'default' : 'secondary'
-                            }
+                            variant={getButtonVariant(button.style)}
                             size="sm"
-                            className={cn(
-                              action.style === 'success' && 'bg-green-600 hover:bg-green-700'
-                            )}
                           >
-                            <PlayIcon className="mr-1 size-3" />
-                            {action.label}
+                            {button.label}
                           </Button>
                           <Badge variant="outline" className="text-xs">
-                            {action.actionType === 'endpoint' ? '调接口' : '跳转'}
+                            {getActionTypeLabel(button.actionType)}
                           </Badge>
-                          {action.confirmRequired && (
-                            <Badge variant="secondary" className="text-xs">
-                              需确认
-                            </Badge>
-                          )}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          <span className="font-mono">
-                            {action.actionType === 'endpoint'
-                              ? `${action.endpointMethod || 'POST'} ${action.endpointUrlPattern}`
-                              : action.redirectUrlPattern}
-                          </span>
+                          <span className="font-mono">标识: {button.buttonKey}</span>
                         </div>
-                        {action.confirmRequired && action.confirmMessage && (
+                        {button.conditionExpr && (
                           <div className="text-xs text-muted-foreground">
-                            确认：{action.confirmTitle} - {action.confirmMessage}
+                            条件: {button.conditionExpr}
                           </div>
                         )}
                       </div>
@@ -271,7 +279,10 @@ function CopyableText({
   return (
     <button
       onClick={handleCopy}
-      className={`group inline-flex items-center gap-1.5 text-left transition-colors hover:text-primary ${className || ''}`}
+      className={cn(
+        'group inline-flex items-center gap-1.5 text-left transition-colors hover:text-primary',
+        className
+      )}
       title="点击复制"
     >
       {children || value}

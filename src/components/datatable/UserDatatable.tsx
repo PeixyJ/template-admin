@@ -233,7 +233,7 @@ const columns: ColumnDef<UserVO>[] = [
     header: '状态',
     cell: ({ row, table }) => {
       const meta = table.options.meta as {
-        onToggleStatus?: (user: UserVO) => void
+        onToggleStatu?: (user: UserVO) => void
       }
       const isActive = row.original.status
       return (
@@ -427,7 +427,7 @@ export function UserDatatable({
     <div className="w-full">
       <div className="border-b">
         {/* 筛选区域 */}
-        <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-b">
+        <div className="flex flex-wrap items-center gap-3 py-4 border-b">
           {/* 用户ID */}
           <Input
             type="number"
@@ -440,7 +440,7 @@ export function UserDatatable({
               }))
             }
             onKeyDown={handleKeyDown}
-            className="w-[150px]"
+            className="w-48"
           />
 
           {/* 用户昵称 */}
@@ -454,7 +454,7 @@ export function UserDatatable({
               }))
             }
             onKeyDown={handleKeyDown}
-            className="w-[150px]"
+            className="w-48"
           />
 
           {/* 邮箱 */}
@@ -469,7 +469,7 @@ export function UserDatatable({
               }))
             }
             onKeyDown={handleKeyDown}
-            className="w-[150px]"
+            className="w-48"
           />
 
           {/* 手机号 */}
@@ -484,7 +484,7 @@ export function UserDatatable({
               }))
             }
             onKeyDown={handleKeyDown}
-            className="w-[150px]"
+            className="w-48"
           />
 
           {/* 状态 */}
@@ -506,7 +506,7 @@ export function UserDatatable({
               onFiltersChange?.(cleanedFilters)
             }}
           >
-            <SelectTrigger className="w-[100px]">
+            <SelectTrigger className="w-48">
               <SelectValue placeholder="全部状态" />
             </SelectTrigger>
             <SelectContent>
@@ -517,9 +517,7 @@ export function UserDatatable({
           </Select>
 
           {/* 搜索按钮 */}
-          <Button size="icon" variant="outline" onClick={handleSearch}>
-            <SearchIcon className="size-4" />
-          </Button>
+
 
           {/* 清除筛选 */}
           {hasFilters && (
@@ -530,7 +528,10 @@ export function UserDatatable({
           )}
 
           {/* 刷新按钮 */}
-          <div className="ml-auto">
+          <div className="ml-auto space-x-2">
+            <Button size="icon" variant="outline" onClick={handleSearch}>
+              <SearchIcon className="size-4" />
+            </Button>
             <Button
               variant="outline"
               size="icon"
@@ -556,9 +557,9 @@ export function UserDatatable({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -650,7 +651,7 @@ export function UserDatatable({
                       variant={isActive ? 'default' : 'ghost'}
                       className={cn(
                         !isActive &&
-                          'bg-primary/10 text-primary hover:bg-primary/20'
+                        'bg-primary/10 text-primary hover:bg-primary/20'
                       )}
                       onClick={() => handleGoToPage(page)}
                       aria-current={isActive ? 'page' : undefined}

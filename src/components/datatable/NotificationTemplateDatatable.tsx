@@ -4,19 +4,16 @@ import {
   ChevronRightIcon,
   CalendarIcon,
   Trash2Icon,
-  BanIcon,
-  CheckCircleIcon,
   Loader2Icon,
   RefreshCwIcon,
   PlusIcon,
   EditIcon,
   EyeIcon,
   MailIcon,
-  LockIcon,
+  SearchIcon,
 } from 'lucide-react'
 
 import type {
-  Column,
   ColumnDef,
   ColumnFiltersState,
   PaginationState,
@@ -45,6 +42,7 @@ import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import {
   Pagination,
   PaginationContent,
@@ -62,21 +60,22 @@ import {
 
 import { usePagination } from '@/hooks/use-pagination'
 import { cn } from '@/lib/utils'
-import type { TemplateListVO } from '@/types/notification-template.types'
+import type { TemplateVO } from '@/types/notification-template.types'
 
 interface NotificationTemplateDatatableProps {
-  data: TemplateListVO[]
+  data: TemplateVO[]
   loading?: boolean
-  onDelete?: (template: TemplateListVO) => void
-  onToggleStatus?: (template: TemplateListVO) => void
-  onEdit?: (template: TemplateListVO) => void
-  onView?: (template: TemplateListVO) => void
-  onSendNotification?: (template: TemplateListVO) => void
+  onDelete?: (template: TemplateVO) => void
+  onToggleStatus?: (template: TemplateVO) => void
+  onEdit?: (template: TemplateVO) => void
+  onView?: (template: TemplateVO) => void
+  onSendNotification?: (template: TemplateVO) => void
   onRefresh?: () => void
   onCreateClick?: () => void
+  onSearch?: (keyword: string) => void
 }
 
-const columns: ColumnDef<TemplateListVO>[] = [
+const columns: ColumnDef<TemplateVO>[] = [
   {
     id: 'select',
     header: ({ table }) => (
@@ -103,15 +102,7 @@ const columns: ColumnDef<TemplateListVO>[] = [
     cell: ({ row }) => {
       return (
         <div className="flex flex-col gap-0.5">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{row.original.name}</span>
-            {row.original.isSystem && (
-              <Badge variant="secondary" className="text-xs">
-                <LockIcon className="mr-1 size-3" />
-                系统
-              </Badge>
-            )}
-          </div>
+          <span className="font-medium">{row.original.name}</span>
           <span className="font-mono text-xs text-muted-foreground">
             {row.original.code}
           </span>
@@ -120,51 +111,43 @@ const columns: ColumnDef<TemplateListVO>[] = [
     },
   },
   {
-    header: '通知类型',
-    accessorKey: 'type',
+    header: '分类',
+    accessorKey: 'parentType',
     cell: ({ row }) => (
       <Badge variant="outline">
-        {row.original.typeName || row.original.type}
+        {row.original.parentTypeDesc || row.original.parentType}
       </Badge>
+    ),
+  },
+  {
+    header: '过期天数',
+    accessorKey: 'expireDays',
+    cell: ({ row }) => (
+      <span className="text-muted-foreground">
+        {row.original.expireDays === 0 ? '永不过期' : `${row.original.expireDays} 天`}
+      </span>
     ),
   },
   {
     header: '状态',
     accessorKey: 'status',
-    cell: ({ row }) => {
-      const isActive = row.getValue('status') === 'active'
+    cell: ({ row, table }) => {
+      const isActive = row.getValue('status') === true
+      const meta = table.options.meta as {
+        onToggleStatus?: (template: TemplateVO) => void
+      }
       return (
-        <span
-          className={cn(
-            'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
-            isActive
-              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-          )}
-        >
-          {isActive ? (
-            <>
-              <CheckCircleIcon className="size-3" />
-              启用
-            </>
-          ) : (
-            <>
-              <BanIcon className="size-3" />
-              禁用
-            </>
-          )}
-        </span>
+        <div className="flex items-center gap-2">
+          <Switch
+            checked={isActive}
+            onCheckedChange={() => meta?.onToggleStatus?.(row.original)}
+          />
+          <span className="text-sm text-muted-foreground">
+            {isActive ? '启用' : '禁用'}
+          </span>
+        </div>
       )
     },
-  },
-  {
-    header: '描述',
-    accessorKey: 'description',
-    cell: ({ row }) => (
-      <span className="max-w-[200px] truncate text-muted-foreground">
-        {row.original.description || '-'}
-      </span>
-    ),
   },
   {
     header: '更新时间',
@@ -183,14 +166,12 @@ const columns: ColumnDef<TemplateListVO>[] = [
     header: '操作',
     cell: ({ row, table }) => {
       const meta = table.options.meta as {
-        onView?: (template: TemplateListVO) => void
-        onEdit?: (template: TemplateListVO) => void
-        onSendNotification?: (template: TemplateListVO) => void
-        onOpenToggleStatus?: (template: TemplateListVO) => void
-        onOpenDelete?: (template: TemplateListVO) => void
+        onView?: (template: TemplateVO) => void
+        onEdit?: (template: TemplateVO) => void
+        onSendNotification?: (template: TemplateVO) => void
+        onOpenDelete?: (template: TemplateVO) => void
       }
-      const isActive = row.original.status === 'active'
-      const isSystem = row.original.isSystem
+      const isActive = row.original.status === true
       return (
         <div className="flex items-center gap-1">
           <Button
@@ -227,28 +208,12 @@ const columns: ColumnDef<TemplateListVO>[] = [
           <Button
             variant="ghost"
             size="icon"
-            className="size-8"
-            onClick={() => meta?.onOpenToggleStatus?.(row.original)}
-            title={isActive ? '禁用' : '启用'}
+            className="size-8 text-destructive hover:text-destructive"
+            onClick={() => meta?.onOpenDelete?.(row.original)}
           >
-            {isActive ? (
-              <BanIcon className="size-4 text-orange-600" />
-            ) : (
-              <CheckCircleIcon className="size-4 text-green-600" />
-            )}
-            <span className="sr-only">{isActive ? '禁用' : '启用'}</span>
+            <Trash2Icon className="size-4" />
+            <span className="sr-only">删除模板</span>
           </Button>
-          {!isSystem && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-8 text-destructive hover:text-destructive"
-              onClick={() => meta?.onOpenDelete?.(row.original)}
-            >
-              <Trash2Icon className="size-4" />
-              <span className="sr-only">删除模板</span>
-            </Button>
-          )}
         </div>
       )
     },
@@ -265,8 +230,11 @@ export function NotificationTemplateDatatable({
   onSendNotification,
   onRefresh,
   onCreateClick,
+  onSearch,
 }: NotificationTemplateDatatableProps) {
+  const id = useId()
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
+  const [keyword, setKeyword] = useState('')
   const pageSize = 10
 
   const [pagination, setPagination] = useState<PaginationState>({
@@ -276,13 +244,9 @@ export function NotificationTemplateDatatable({
 
   // Delete dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [templateToDelete, setTemplateToDelete] = useState<TemplateListVO | null>(null)
+  const [templateToDelete, setTemplateToDelete] = useState<TemplateVO | null>(null)
 
-  // Toggle status dialog state
-  const [toggleStatusDialogOpen, setToggleStatusDialogOpen] = useState(false)
-  const [templateToToggle, setTemplateToToggle] = useState<TemplateListVO | null>(null)
-
-  const handleOpenDelete = (template: TemplateListVO) => {
+  const handleOpenDelete = (template: TemplateVO) => {
     setTemplateToDelete(template)
     setDeleteDialogOpen(true)
   }
@@ -295,17 +259,14 @@ export function NotificationTemplateDatatable({
     setTemplateToDelete(null)
   }
 
-  const handleOpenToggleStatus = (template: TemplateListVO) => {
-    setTemplateToToggle(template)
-    setToggleStatusDialogOpen(true)
+  const handleSearch = () => {
+    onSearch?.(keyword)
   }
 
-  const handleConfirmToggleStatus = () => {
-    if (templateToToggle) {
-      onToggleStatus?.(templateToToggle)
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch()
     }
-    setToggleStatusDialogOpen(false)
-    setTemplateToToggle(null)
   }
 
   const table = useReactTable({
@@ -320,7 +281,7 @@ export function NotificationTemplateDatatable({
       onEdit,
       onSendNotification,
       onOpenDelete: handleOpenDelete,
-      onOpenToggleStatus: handleOpenToggleStatus,
+      onToggleStatus,
     },
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
@@ -342,10 +303,35 @@ export function NotificationTemplateDatatable({
         <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-6 py-3">
           <span className="font-medium">通知模板列表</span>
           <div className="flex items-center gap-2">
-            <Filter column={table.getColumn('name')!} />
+            <div className="flex items-center gap-2">
+              <Label htmlFor={`${id}-search`} className="sr-only">
+                搜索模板
+              </Label>
+              <Input
+                id={`${id}-search`}
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="搜索模板..."
+                type="text"
+                className="h-9 w-[150px]"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={handleSearch}
+                disabled={loading}
+                title="搜索"
+              >
+                <SearchIcon className="size-4" />
+                <span className="sr-only">搜索</span>
+              </Button>
+            </div>
             <Button
               variant="outline"
               size="icon"
+              className="h-9 w-9 ml-auto"
               onClick={onRefresh}
               disabled={loading}
               title="刷新"
@@ -533,47 +519,6 @@ export function NotificationTemplateDatatable({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Toggle Status Confirmation Dialog */}
-      <AlertDialog open={toggleStatusDialogOpen} onOpenChange={setToggleStatusDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {templateToToggle?.status === 'active' ? '禁用模板' : '启用模板'}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              确定要{templateToToggle?.status === 'active' ? '禁用' : '启用'}模板{' '}
-              <span className="font-medium text-foreground">{templateToToggle?.name}</span> 吗？
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmToggleStatus}>
-              确认
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  )
-}
-
-function Filter({ column }: { column: Column<TemplateListVO, unknown> }) {
-  const id = useId()
-  const columnFilterValue = column.getFilterValue()
-
-  return (
-    <div>
-      <Label htmlFor={`${id}-input`} className="sr-only">
-        搜索模板
-      </Label>
-      <Input
-        id={`${id}-input`}
-        value={(columnFilterValue ?? '') as string}
-        onChange={(e) => column.setFilterValue(e.target.value)}
-        placeholder="搜索模板名称..."
-        type="text"
-        className="w-[200px]"
-      />
-    </div>
+          </div>
   )
 }

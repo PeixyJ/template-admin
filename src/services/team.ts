@@ -2,6 +2,7 @@ import { api } from './api'
 import type {
   TeamListParams,
   TeamListResponse,
+  TeamDetailResponse,
   TeamMemberListResponse,
   AdminPointsAccountResponse,
 } from '@/types/team.types'
@@ -13,6 +14,11 @@ const ADMIN_POINTS_PREFIX = '/v1/admin/points'
 /** 分页查询团队列表 */
 export function getTeamList(params: TeamListParams) {
   return api.get<TeamListResponse>(ADMIN_TEAMS_PREFIX, { params })
+}
+
+/** 获取团队基本信息 */
+export function getTeamInfo(teamId: number) {
+  return api.get<TeamDetailResponse>(`${ADMIN_TEAMS_PREFIX}/${teamId}`)
 }
 
 /** 获取团队账户详情（含点数信息） */

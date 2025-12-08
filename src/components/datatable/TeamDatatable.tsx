@@ -10,7 +10,10 @@ import {
   RefreshCwIcon,
   SearchIcon,
   XIcon,
+  CopyIcon,
+  CheckIcon,
 } from 'lucide-react'
+import { toast } from 'sonner'
 
 import type {
   ColumnDef,
@@ -26,6 +29,7 @@ import {
 } from '@tanstack/react-table'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -79,6 +83,51 @@ const teamTypeLabels: Record<TeamType, string> = {
   COLLABORATION_TEAM: '协作团队',
 }
 
+// 可点击复制的文本组件
+function CopyableText({
+  value,
+  label,
+  className,
+  prefix,
+}: {
+  value: string | number
+  label?: string
+  className?: string
+  prefix?: string
+}) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(String(value))
+      setCopied(true)
+      toast.success(`已复制${label || '内容'}`)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('复制失败')
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={cn(
+        'inline-flex items-center gap-1 hover:text-primary cursor-pointer transition-colors',
+        className
+      )}
+      title={`点击复制${label || ''}`}
+    >
+      <span>{prefix}{value}</span>
+      {copied ? (
+        <CheckIcon className="size-3 text-green-500" />
+      ) : (
+        <CopyIcon className="size-3 opacity-0 group-hover:opacity-50 hover:!opacity-100" />
+      )}
+    </button>
+  )
+}
+
 const columns: ColumnDef<TeamVO>[] = [
   {
     id: 'select',
@@ -108,7 +157,7 @@ const columns: ColumnDef<TeamVO>[] = [
         onTeamClick?: (team: TeamVO) => void
       }
       return (
-        <div className="flex items-center gap-4">
+        <div className="group flex items-center gap-4">
           <Avatar className="size-10 rounded-lg">
             {row.original.logoUrl ? (
               <AvatarImage src={row.original.logoUrl} alt={row.original.name} />
@@ -125,9 +174,11 @@ const columns: ColumnDef<TeamVO>[] = [
             >
               {row.getValue('name')}
             </button>
-            <span className="text-xs text-muted-foreground">
-              ID: {row.original.id}
-            </span>
+            <CopyableText
+              value={row.original.id}
+              label="团队ID"
+              className="text-xs text-muted-foreground"
+            />
           </div>
         </div>
       )
@@ -160,7 +211,7 @@ const columns: ColumnDef<TeamVO>[] = [
         ? row.original.ownerNickname.charAt(0).toUpperCase()
         : null
       return (
-        <div className="flex items-center gap-2">
+        <div className="group flex items-center gap-2">
           <Avatar className="size-7">
             <AvatarImage
               src={row.original.ownerAvatarUrl ?? undefined}
@@ -170,9 +221,23 @@ const columns: ColumnDef<TeamVO>[] = [
               {initials || <UserIcon className="size-3" />}
             </AvatarFallback>
           </Avatar>
-          <span className="text-muted-foreground">
-            {row.original.ownerNickname || `用户 #${row.original.ownerId}`}
-          </span>
+          <div className="flex flex-col gap-0.5">
+            {row.original.ownerNickname ? (
+              <CopyableText
+                value={row.original.ownerNickname}
+                label="所有者名称"
+                className="text-muted-foreground"
+              />
+            ) : (
+              <span className="text-muted-foreground">未知用户</span>
+            )}
+            <CopyableText
+              value={row.original.ownerId}
+              label="所有者ID"
+              className="text-xs text-muted-foreground"
+              prefix="#"
+            />
+          </div>
         </div>
       )
     },
@@ -191,15 +256,44 @@ const columns: ColumnDef<TeamVO>[] = [
     accessorKey: 'planName',
     cell: ({ row }) => {
       const planName = row.getValue('planName') as string | null
+      const planLevel = row.original.planLevel ?? 0
       const planEndDate = row.original.planEndDate
+
+      // 根据 planLevel (0-10) 决定 badge 的鲜艳程度
+      const getPlanBadgeStyle = (level: number) => {
+        // level 0-2: 灰色调（低调）
+        // level 3-4: 蓝色调（普通）
+        // level 5-6: 绿色调（中等）
+        // level 7-8: 紫色调（高级）
+        // level 9-10: 金色/橙色调（顶级）
+        if (level <= 2) {
+          return 'bg-gray-100 text-gray-600 dark:bg-gray-800/50 dark:text-gray-400'
+        }
+        if (level <= 4) {
+          return 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
+        }
+        if (level <= 6) {
+          return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+        }
+        if (level <= 8) {
+          return 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400'
+        }
+        // level 9-10: 最鲜艳的金色/橙色
+        return 'bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 dark:from-amber-900/50 dark:to-orange-900/50 dark:text-amber-400 font-semibold'
+      }
+
       return (
-        <div className="flex flex-col gap-0.5">
-          <span className={cn(
-            'text-sm',
-            planName ? 'text-foreground' : 'text-muted-foreground'
-          )}>
-            {planName || '无套餐'}
-          </span>
+        <div className="flex flex-col gap-1">
+          {planName ? (
+            <Badge
+              variant="secondary"
+              className={cn('border-0', getPlanBadgeStyle(planLevel))}
+            >
+              {planName}
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-muted-foreground">无套餐</Badge>
+          )}
           {planEndDate && (
             <span className="text-xs text-muted-foreground">
               到期: {new Date(planEndDate).toLocaleDateString('zh-CN')}
@@ -384,10 +478,9 @@ export function TeamDatatable({
     <div className="w-full">
       <div className="border-b">
         {/* 筛选区域 */}
-        <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-b">
+        <div className="flex flex-wrap items-center gap-3 py-4">
           {/* 团队ID */}
           <Input
-            type="number"
             placeholder="团队ID"
             value={localFilters.teamId ?? ''}
             onChange={(e) =>
@@ -397,7 +490,7 @@ export function TeamDatatable({
               }))
             }
             onKeyDown={handleKeyDown}
-            className="w-[150px]"
+            className="w-48"
           />
 
           {/* 团队名称 */}
@@ -411,12 +504,11 @@ export function TeamDatatable({
               }))
             }
             onKeyDown={handleKeyDown}
-            className="w-[150px]"
+            className="w-48"
           />
 
           {/* 所有者ID */}
           <Input
-            type="number"
             placeholder="所有者ID"
             value={localFilters.ownerId ?? ''}
             onChange={(e) =>
@@ -426,7 +518,7 @@ export function TeamDatatable({
               }))
             }
             onKeyDown={handleKeyDown}
-            className="w-[150px]"
+            className="w-48"
           />
 
           {/* 团队类型 */}
@@ -448,7 +540,7 @@ export function TeamDatatable({
               onFiltersChange?.(cleanedFilters)
             }}
           >
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="w-48">
               <SelectValue placeholder="全部类型" />
             </SelectTrigger>
             <SelectContent>
@@ -477,7 +569,7 @@ export function TeamDatatable({
               onFiltersChange?.(cleanedFilters)
             }}
           >
-            <SelectTrigger className="w-[100px]">
+            <SelectTrigger className="w-48">
               <SelectValue placeholder="全部状态" />
             </SelectTrigger>
             <SelectContent>
@@ -487,10 +579,7 @@ export function TeamDatatable({
             </SelectContent>
           </Select>
 
-          {/* 搜索按钮 */}
-          <Button size="icon" variant="outline" onClick={handleSearch}>
-            <SearchIcon className="size-4" />
-          </Button>
+
 
           {/* 清除筛选 */}
           {hasFilters && (
@@ -501,7 +590,10 @@ export function TeamDatatable({
           )}
 
           {/* 刷新按钮 */}
-          <div className="ml-auto">
+          <div className="ml-auto space-x-2.5">
+            <Button size="icon" variant="outline" onClick={handleSearch}>
+              <SearchIcon className="size-4" />
+            </Button>
             <Button
               variant="outline"
               size="icon"
@@ -527,9 +619,9 @@ export function TeamDatatable({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -621,7 +713,7 @@ export function TeamDatatable({
                       variant={isActive ? 'default' : 'ghost'}
                       className={cn(
                         !isActive &&
-                          'bg-primary/10 text-primary hover:bg-primary/20'
+                        'bg-primary/10 text-primary hover:bg-primary/20'
                       )}
                       onClick={() => handleGoToPage(page)}
                       aria-current={isActive ? 'page' : undefined}

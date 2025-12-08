@@ -31,53 +31,62 @@ import { Switch } from '@/components/ui/switch'
 
 import { updateTemplate, getTemplateDetail } from '@/services/notification-template'
 import type {
-  ActionConfig,
-  ParamSchema,
+  TemplateParam,
+  TemplateButton,
   UpdateTemplateDTO,
-  TemplateListVO,
+  TemplateVO,
   TemplateDetailVO,
+  ParentType,
+  ButtonStyle,
+  ButtonActionType,
 } from '@/types/notification-template.types'
 
 interface EditTemplateDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  template: TemplateListVO | null
+  template: TemplateVO | null
   onSuccess: () => void
 }
 
-const ACTION_STYLES = [
-  { value: 'primary', label: '主要' },
-  { value: 'secondary', label: '次要' },
-  { value: 'danger', label: '危险' },
-  { value: 'success', label: '成功' },
+const PARENT_TYPES: { value: ParentType; label: string }[] = [
+  { value: 'INBOX', label: '收件箱' },
+  { value: 'SYSTEM', label: '系统通知' },
 ]
 
-const ACTION_TYPES = [
-  { value: 'endpoint', label: '调用接口' },
-  { value: 'redirect', label: '跳转链接' },
+const BUTTON_STYLES: { value: ButtonStyle; label: string }[] = [
+  { value: 'PRIMARY', label: '主要' },
+  { value: 'DANGER', label: '危险' },
+  { value: 'DEFAULT', label: '默认' },
+]
+
+const BUTTON_ACTION_TYPES: { value: ButtonActionType; label: string }[] = [
+  { value: 'API', label: '调用接口' },
+  { value: 'REDIRECT', label: '跳转链接' },
+  { value: 'BEAN', label: 'Bean调用' },
 ]
 
 const PARAM_TYPES = [
   { value: 'string', label: '字符串' },
   { value: 'number', label: '数字' },
   { value: 'boolean', label: '布尔值' },
+  { value: 'object', label: '对象' },
+  { value: 'array', label: '数组' },
 ]
 
-const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
-
-const emptyAction: ActionConfig = {
-  actionKey: '',
+const emptyButton: TemplateButton = {
+  buttonKey: '',
   label: '',
-  style: 'primary',
-  actionType: 'redirect',
-  confirmRequired: false,
+  style: 'DEFAULT',
+  actionType: 'REDIRECT',
+  sortOrder: 0,
 }
 
-const emptyParam: ParamSchema = {
-  name: '',
-  type: 'string',
-  desc: '',
+const emptyParam: TemplateParam = {
+  paramKey: '',
+  paramType: 'string',
+  description: '',
   required: false,
+  sortOrder: 0,
 }
 
 export function EditTemplateDialog({
@@ -92,11 +101,13 @@ export function EditTemplateDialog({
 
   const [formData, setFormData] = useState<UpdateTemplateDTO>({
     name: '',
-    description: '',
+    parentType: 'INBOX',
     titleTemplate: '',
     contentTemplate: '',
-    defaultActions: [],
-    paramSchema: [],
+    params: [],
+    buttons: [],
+    expireDays: 0,
+    status: true,
     dataVersion: 0,
   })
 
@@ -115,11 +126,13 @@ export function EditTemplateDialog({
         setTemplateDetail(detail)
         setFormData({
           name: detail.name,
-          description: detail.description || '',
+          parentType: detail.parentType,
           titleTemplate: detail.titleTemplate,
           contentTemplate: detail.contentTemplate,
-          defaultActions: detail.defaultActions || [],
-          paramSchema: detail.paramSchema || [],
+          params: detail.params || [],
+          buttons: detail.buttons || [],
+          expireDays: detail.expireDays,
+          status: detail.status,
           dataVersion: detail.dataVersion,
         })
       } else {
@@ -138,11 +151,13 @@ export function EditTemplateDialog({
   const resetForm = () => {
     setFormData({
       name: '',
-      description: '',
+      parentType: 'INBOX',
       titleTemplate: '',
       contentTemplate: '',
-      defaultActions: [],
-      paramSchema: [],
+      params: [],
+      buttons: [],
+      expireDays: 0,
+      status: true,
       dataVersion: 0,
     })
     setTemplateDetail(null)
@@ -155,25 +170,25 @@ export function EditTemplateDialog({
     onOpenChange(isOpen)
   }
 
-  const handleAddAction = () => {
+  const handleAddButton = () => {
     setFormData((prev) => ({
       ...prev,
-      defaultActions: [...(prev.defaultActions || []), { ...emptyAction }],
+      buttons: [...(prev.buttons || []), { ...emptyButton, sortOrder: (prev.buttons?.length || 0) }],
     }))
   }
 
-  const handleRemoveAction = (index: number) => {
+  const handleRemoveButton = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      defaultActions: prev.defaultActions?.filter((_, i) => i !== index),
+      buttons: prev.buttons?.filter((_, i) => i !== index),
     }))
   }
 
-  const handleUpdateAction = (index: number, field: keyof ActionConfig, value: unknown) => {
+  const handleUpdateButton = (index: number, field: keyof TemplateButton, value: unknown) => {
     setFormData((prev) => ({
       ...prev,
-      defaultActions: prev.defaultActions?.map((action, i) =>
-        i === index ? { ...action, [field]: value } : action
+      buttons: prev.buttons?.map((button, i) =>
+        i === index ? { ...button, [field]: value } : button
       ),
     }))
   }
@@ -181,21 +196,21 @@ export function EditTemplateDialog({
   const handleAddParam = () => {
     setFormData((prev) => ({
       ...prev,
-      paramSchema: [...(prev.paramSchema || []), { ...emptyParam }],
+      params: [...(prev.params || []), { ...emptyParam, sortOrder: (prev.params?.length || 0) }],
     }))
   }
 
   const handleRemoveParam = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      paramSchema: prev.paramSchema?.filter((_, i) => i !== index),
+      params: prev.params?.filter((_, i) => i !== index),
     }))
   }
 
-  const handleUpdateParam = (index: number, field: keyof ParamSchema, value: unknown) => {
+  const handleUpdateParam = (index: number, field: keyof TemplateParam, value: unknown) => {
     setFormData((prev) => ({
       ...prev,
-      paramSchema: prev.paramSchema?.map((param, i) =>
+      params: prev.params?.map((param, i) =>
         i === index ? { ...param, [field]: value } : param
       ),
     }))
@@ -204,15 +219,15 @@ export function EditTemplateDialog({
   const handleSubmit = async () => {
     if (!template) return
 
-    if (!formData.name.trim()) {
+    if (!formData.name?.trim()) {
       toast.error('请输入模板名称')
       return
     }
-    if (!formData.titleTemplate.trim()) {
+    if (!formData.titleTemplate?.trim()) {
       toast.error('请输入标题模板')
       return
     }
-    if (!formData.contentTemplate.trim()) {
+    if (!formData.contentTemplate?.trim()) {
       toast.error('请输入内容模板')
       return
     }
@@ -221,10 +236,9 @@ export function EditTemplateDialog({
     try {
       const res = await updateTemplate(template.id, {
         ...formData,
-        name: formData.name.trim(),
-        description: formData.description?.trim() || undefined,
-        titleTemplate: formData.titleTemplate.trim(),
-        contentTemplate: formData.contentTemplate.trim(),
+        name: formData.name?.trim(),
+        titleTemplate: formData.titleTemplate?.trim(),
+        contentTemplate: formData.contentTemplate?.trim(),
       })
 
       if (res.data.code === 'SUCCESS') {
@@ -250,7 +264,7 @@ export function EditTemplateDialog({
           <DialogDescription>
             {templateDetail ? (
               <>
-                编码：<span className="font-mono">{templateDetail.code}</span> | 类型：{templateDetail.typeName}
+                编码：<span className="font-mono">{templateDetail.code}</span> | 分类：{templateDetail.parentTypeDesc}
               </>
             ) : (
               '修改模板信息'
@@ -265,30 +279,71 @@ export function EditTemplateDialog({
         ) : (
           <>
             <div className="flex flex-col gap-4 py-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="name">
-                  模板名称 <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  placeholder="如：欢迎通知"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="name">
+                    模板名称 <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    placeholder="如：欢迎通知"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="parentType">大分类</Label>
+                  <Select
+                    value={formData.parentType}
+                    onValueChange={(value: ParentType) =>
+                      setFormData((prev) => ({ ...prev, parentType: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择大分类" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PARENT_TYPES.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="description">描述</Label>
-                <Input
-                  id="description"
-                  placeholder="模板描述（可选）"
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, description: e.target.value }))
-                  }
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="expireDays">过期天数</Label>
+                  <Input
+                    id="expireDays"
+                    type="number"
+                    placeholder="0 表示永不过期"
+                    value={formData.expireDays || ''}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        expireDays: parseInt(e.target.value) || 0,
+                      }))
+                    }
+                    min={0}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 pt-6">
+                  <Switch
+                    id="status"
+                    checked={formData.status}
+                    onCheckedChange={(checked: boolean) =>
+                      setFormData((prev) => ({ ...prev, status: checked }))
+                    }
+                  />
+                  <Label htmlFor="status">启用模板</Label>
+                </div>
               </div>
 
               <div className="flex flex-col gap-2">
@@ -324,22 +379,22 @@ export function EditTemplateDialog({
               </div>
 
               <Accordion type="multiple" className="w-full">
-                {/* 参数说明 */}
+                {/* 参数定义 */}
                 <AccordionItem value="params">
-                  <AccordionTrigger>参数说明</AccordionTrigger>
+                  <AccordionTrigger>参数定义</AccordionTrigger>
                   <AccordionContent>
                     <div className="flex flex-col gap-3">
-                      {formData.paramSchema?.map((param, index) => (
+                      {formData.params?.map((param, index) => (
                         <div key={index} className="grid gap-2 rounded-lg border p-3">
                           <div className="grid gap-2 sm:grid-cols-3">
                             <Input
-                              placeholder="参数名"
-                              value={param.name}
-                              onChange={(e) => handleUpdateParam(index, 'name', e.target.value)}
+                              placeholder="参数键名"
+                              value={param.paramKey}
+                              onChange={(e) => handleUpdateParam(index, 'paramKey', e.target.value)}
                             />
                             <Select
-                              value={param.type}
-                              onValueChange={(value) => handleUpdateParam(index, 'type', value)}
+                              value={param.paramType}
+                              onValueChange={(value) => handleUpdateParam(index, 'paramType', value)}
                             >
                               <SelectTrigger>
                                 <SelectValue />
@@ -370,8 +425,13 @@ export function EditTemplateDialog({
                           </div>
                           <Input
                             placeholder="参数描述"
-                            value={param.desc}
-                            onChange={(e) => handleUpdateParam(index, 'desc', e.target.value)}
+                            value={param.description}
+                            onChange={(e) => handleUpdateParam(index, 'description', e.target.value)}
+                          />
+                          <Input
+                            placeholder="默认值（可选）"
+                            value={param.defaultValue || ''}
+                            onChange={(e) => handleUpdateParam(index, 'defaultValue', e.target.value)}
                           />
                         </div>
                       ))}
@@ -388,34 +448,34 @@ export function EditTemplateDialog({
                   </AccordionContent>
                 </AccordionItem>
 
-                {/* 操作按钮 */}
-                <AccordionItem value="actions">
-                  <AccordionTrigger>操作按钮</AccordionTrigger>
+                {/* 按钮配置 */}
+                <AccordionItem value="buttons">
+                  <AccordionTrigger>按钮配置</AccordionTrigger>
                   <AccordionContent>
                     <div className="flex flex-col gap-3">
-                      {formData.defaultActions?.map((action, index) => (
+                      {formData.buttons?.map((button, index) => (
                         <div key={index} className="flex flex-col gap-2 rounded-lg border p-3">
                           <div className="grid gap-2 sm:grid-cols-3">
                             <Input
-                              placeholder="操作标识"
-                              value={action.actionKey}
-                              onChange={(e) => handleUpdateAction(index, 'actionKey', e.target.value)}
+                              placeholder="按钮标识"
+                              value={button.buttonKey}
+                              onChange={(e) => handleUpdateButton(index, 'buttonKey', e.target.value)}
                             />
                             <Input
-                              placeholder="按钮文字"
-                              value={action.label}
-                              onChange={(e) => handleUpdateAction(index, 'label', e.target.value)}
+                              placeholder="按钮文本"
+                              value={button.label}
+                              onChange={(e) => handleUpdateButton(index, 'label', e.target.value)}
                             />
                             <div className="flex items-center gap-2">
                               <Select
-                                value={action.style}
-                                onValueChange={(value) => handleUpdateAction(index, 'style', value)}
+                                value={button.style}
+                                onValueChange={(value: ButtonStyle) => handleUpdateButton(index, 'style', value)}
                               >
                                 <SelectTrigger>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {ACTION_STYLES.map((style) => (
+                                  {BUTTON_STYLES.map((style) => (
                                     <SelectItem key={style.value} value={style.value}>
                                       {style.label}
                                     </SelectItem>
@@ -426,7 +486,7 @@ export function EditTemplateDialog({
                                 variant="ghost"
                                 size="icon"
                                 className="text-destructive"
-                                onClick={() => handleRemoveAction(index)}
+                                onClick={() => handleRemoveButton(index)}
                               >
                                 <Trash2Icon className="size-4" />
                               </Button>
@@ -434,84 +494,43 @@ export function EditTemplateDialog({
                           </div>
                           <div className="grid gap-2 sm:grid-cols-2">
                             <Select
-                              value={action.actionType}
-                              onValueChange={(value) => handleUpdateAction(index, 'actionType', value)}
+                              value={button.actionType}
+                              onValueChange={(value: ButtonActionType) => handleUpdateButton(index, 'actionType', value)}
                             >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {ACTION_TYPES.map((type) => (
+                                {BUTTON_ACTION_TYPES.map((type) => (
                                   <SelectItem key={type.value} value={type.value}>
                                     {type.label}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
-                            {action.actionType === 'endpoint' ? (
-                              <Select
-                                value={action.endpointMethod || 'POST'}
-                                onValueChange={(value) => handleUpdateAction(index, 'endpointMethod', value)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {HTTP_METHODS.map((method) => (
-                                    <SelectItem key={method} value={method}>
-                                      {method}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : null}
-                          </div>
-                          {action.actionType === 'endpoint' ? (
                             <Input
-                              placeholder="接口URL模板，如：/api/notifications/${id}/approve"
-                              value={action.endpointUrlPattern || ''}
-                              onChange={(e) => handleUpdateAction(index, 'endpointUrlPattern', e.target.value)}
+                              type="number"
+                              placeholder="排序"
+                              value={button.sortOrder}
+                              onChange={(e) => handleUpdateButton(index, 'sortOrder', parseInt(e.target.value) || 0)}
+                              min={0}
                             />
-                          ) : (
-                            <Input
-                              placeholder="跳转URL模板，如：/dashboard/orders/${orderId}"
-                              value={action.redirectUrlPattern || ''}
-                              onChange={(e) => handleUpdateAction(index, 'redirectUrlPattern', e.target.value)}
-                            />
-                          )}
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                              <Switch
-                                checked={action.confirmRequired}
-                                onCheckedChange={(checked) => handleUpdateAction(index, 'confirmRequired', checked)}
-                              />
-                              <span className="text-sm">需要确认</span>
-                            </div>
                           </div>
-                          {action.confirmRequired && (
-                            <div className="grid gap-2 sm:grid-cols-2">
-                              <Input
-                                placeholder="确认框标题"
-                                value={action.confirmTitle || ''}
-                                onChange={(e) => handleUpdateAction(index, 'confirmTitle', e.target.value)}
-                              />
-                              <Input
-                                placeholder="确认框内容"
-                                value={action.confirmMessage || ''}
-                                onChange={(e) => handleUpdateAction(index, 'confirmMessage', e.target.value)}
-                              />
-                            </div>
-                          )}
+                          <Input
+                            placeholder="显示条件表达式（SpEL，可选）"
+                            value={button.conditionExpr || ''}
+                            onChange={(e) => handleUpdateButton(index, 'conditionExpr', e.target.value)}
+                          />
                         </div>
                       ))}
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={handleAddAction}
+                        onClick={handleAddButton}
                       >
                         <PlusIcon className="mr-2 size-4" />
-                        添加操作按钮
+                        添加按钮
                       </Button>
                     </div>
                   </AccordionContent>

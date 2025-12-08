@@ -4,20 +4,16 @@ import type {
   TemplateListParams,
   TemplateListResponse,
   TemplateDetailResponse,
-  TemplateOptionsResponse,
-  TemplatePreviewResponse,
-  TemplateValidateResponse,
-  SendNotificationResponse,
+  NotificationPreviewResponse,
   CreateTemplateResponse,
+  SendNotificationResponse,
+  BatchSendNotificationResponse,
   CreateTemplateDTO,
   UpdateTemplateDTO,
-  UpdateTemplateStatusDTO,
-  PreviewTemplateDTO,
-  ValidateTemplateDTO,
-  SendNotificationDTO,
+  AdminSendNotificationDTO,
 } from '@/types/notification-template.types'
 
-const TEMPLATE_PREFIX = '/v1/admin/notification-templates'
+const TEMPLATE_PREFIX = '/v1/admin/notifications/templates'
 
 /** 分页查询模板列表 */
 export function getTemplateList(params: TemplateListParams) {
@@ -44,29 +40,24 @@ export function deleteTemplate(id: number) {
   return api.delete<ApiResult>(`${TEMPLATE_PREFIX}/${id}`)
 }
 
-/** 预览模板 */
-export function previewTemplate(id: number, data: PreviewTemplateDTO) {
-  return api.post<TemplatePreviewResponse>(`${TEMPLATE_PREFIX}/${id}/preview`, data)
-}
-
-/** 启用/禁用模板 */
-export function updateTemplateStatus(id: number, data: UpdateTemplateStatusDTO) {
-  return api.patch<ApiResult>(`${TEMPLATE_PREFIX}/${id}/status`, data)
-}
-
-/** 获取模板下拉选项 */
-export function getTemplateOptions(type?: string) {
-  return api.get<TemplateOptionsResponse>(`${TEMPLATE_PREFIX}/options`, {
-    params: type ? { type } : undefined,
+/** 更新模板状态 */
+export function updateTemplateStatus(id: number, status: boolean) {
+  return api.put<ApiResult>(`${TEMPLATE_PREFIX}/${id}/status`, null, {
+    params: { status },
   })
 }
 
-/** 校验模板语法 */
-export function validateTemplate(data: ValidateTemplateDTO) {
-  return api.post<TemplateValidateResponse>(`${TEMPLATE_PREFIX}/validate`, data)
+/** 预览模板 */
+export function previewTemplate(id: number, params: Record<string, unknown>) {
+  return api.post<NotificationPreviewResponse>(`${TEMPLATE_PREFIX}/${id}/preview`, params)
 }
 
-/** 发送通知给指定用户 */
-export function sendNotification(data: SendNotificationDTO) {
+/** 发送通知给单个用户 */
+export function sendNotification(data: AdminSendNotificationDTO) {
   return api.post<SendNotificationResponse>(`${TEMPLATE_PREFIX}/send`, data)
+}
+
+/** 批量发送通知给多个用户 */
+export function batchSendNotification(data: AdminSendNotificationDTO) {
+  return api.post<BatchSendNotificationResponse>(`${TEMPLATE_PREFIX}/batch-send`, data)
 }
