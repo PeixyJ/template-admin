@@ -127,12 +127,40 @@ export function UserDetailSheet({
                 value={userDetail.inviteCode}
                 copyable
               />
-              <DetailItem
-                icon={<UserIcon className="size-4" />}
-                label="邀请人"
-                value={userDetail.inviter?.nickname || '-'}
-                copyable={!!userDetail.inviter}
-              />
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 text-muted-foreground">
+                  <UserIcon className="size-4" />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-xs text-muted-foreground">邀请人</span>
+                  {userDetail.inviter ? (
+                    <div className="flex flex-col gap-0.5">
+                      <CopyableText
+                        value={userDetail.inviter.nickname}
+                        label="邀请人昵称"
+                        className="text-sm"
+                      />
+                      <button
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(String(userDetail.inviter!.id))
+                            toast.success('邀请人ID已复制')
+                          } catch {
+                            toast.error('复制失败')
+                          }
+                        }}
+                        className="group inline-flex items-center gap-1 text-left text-xs text-muted-foreground transition-colors hover:text-primary"
+                        title="点击复制ID"
+                      >
+                        #{userDetail.inviter.id}
+                        <CopyIcon className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-sm">-</span>
+                  )}
+                </div>
+              </div>
               <DetailItem
                 icon={<CalendarIcon className="size-4" />}
                 label="注册时间"

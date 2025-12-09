@@ -130,7 +130,10 @@ const columns: ColumnDef<UserVO>[] = [
       }
       return (
         <div className="flex items-center gap-4">
-          <Avatar className="size-10 rounded-lg">
+          <Avatar className={cn(
+            'size-10 rounded-lg ring-2',
+            row.original.status ? 'ring-transparent' : 'ring-destructive/40'
+          )}>
             {row.original.avatarUrl ? (
               <AvatarImage src={row.original.avatarUrl} alt={row.original.nickname} />
             ) : null}
@@ -145,16 +148,14 @@ const columns: ColumnDef<UserVO>[] = [
             >
               {row.getValue('nickname')}
             </button>
-            <span className="text-xs text-muted-foreground">
-              ID: {row.original.id}
-            </span>
+            <CopyableId id={row.original.id} />
           </div>
         </div>
       )
     },
   },
   {
-    header: '',
+    header: '邀请码',
     accessorKey: 'inviteCode',
     cell: ({ row }) => {
       const inviteCode = row.getValue('inviteCode') as string | null
@@ -211,7 +212,10 @@ const columns: ColumnDef<UserVO>[] = [
               {initials || <UserIcon className="size-3" />}
             </AvatarFallback>
           </Avatar>
-          <span className="text-sm text-muted-foreground">{inviter.nickname}</span>
+          <div className="flex flex-col">
+            <span className="text-sm text-muted-foreground">{inviter.nickname}</span>
+            <CopyableId id={inviter.id} />
+          </div>
         </div>
       )
     },
@@ -756,6 +760,36 @@ export function UserDatatable({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  )
+}
+
+function CopyableId({ id }: { id: number }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(String(id))
+      setCopied(true)
+      toast.success('ID已复制')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      toast.error('复制失败')
+    }
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="group inline-flex items-center gap-1 text-left text-xs text-muted-foreground/70 transition-colors hover:text-primary"
+      title="点击复制ID"
+    >
+      #{id}
+      {copied ? (
+        <CheckIcon className="size-3 text-green-500" />
+      ) : (
+        <CopyIcon className="size-3 opacity-0 transition-opacity group-hover:opacity-100" />
+      )}
+    </button>
   )
 }
 
