@@ -136,25 +136,25 @@ const columns: ColumnDef<AdminVO>[] = [
     header: '状态',
     accessorKey: 'status',
     cell: ({ row }) => {
-      const isDisabled = row.getValue('status') as boolean
+      const isEnabled = row.getValue('status') as boolean
       return (
         <span
           className={cn(
             'inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium',
-            isDisabled
-              ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-              : 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+            isEnabled
+              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
           )}
         >
-          {isDisabled ? (
-            <>
-              <BanIcon className="size-3" />
-              {row.original.statusDesc || '已禁用'}
-            </>
-          ) : (
+          {isEnabled ? (
             <>
               <CheckCircleIcon className="size-3" />
               {row.original.statusDesc || '正常'}
+            </>
+          ) : (
+            <>
+              <BanIcon className="size-3" />
+              {row.original.statusDesc || '已禁用'}
             </>
           )}
         </span>
@@ -184,7 +184,7 @@ const columns: ColumnDef<AdminVO>[] = [
         onOpenDelete?: (admin: AdminVO) => void
         onOpenToggleStatus?: (admin: AdminVO) => void
       }
-      const isDisabled = row.original.status
+      const isEnabled = row.original.status
       return (
         <div className="flex items-center gap-1">
           <Button
@@ -202,14 +202,14 @@ const columns: ColumnDef<AdminVO>[] = [
             size="icon"
             className="size-8"
             onClick={() => meta?.onOpenToggleStatus?.(row.original)}
-            title={isDisabled ? '启用' : '禁用'}
+            title={isEnabled ? '禁用' : '启用'}
           >
-            {isDisabled ? (
-              <CheckCircleIcon className="size-4 text-green-600" />
-            ) : (
+            {isEnabled ? (
               <BanIcon className="size-4 text-orange-600" />
+            ) : (
+              <CheckCircleIcon className="size-4 text-green-600" />
             )}
-            <span className="sr-only">{isDisabled ? '启用' : '禁用'}</span>
+            <span className="sr-only">{isEnabled ? '禁用' : '启用'}</span>
           </Button>
           <Button
             variant="ghost"
@@ -352,26 +352,23 @@ export function AdminDatatable({
 
   return (
     <div className="w-full">
-      <div className="border-b">
-        <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-6 py-3">
-          <span className="font-medium">管理员列表</span>
-          <div className="flex items-center gap-2">
-            <Filter column={table.getColumn('nickname')!} />
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onRefresh}
-              disabled={loading}
-              title="刷新"
-            >
-              <RefreshCwIcon className={cn('size-4', loading && 'animate-spin')} />
-              <span className="sr-only">刷新</span>
-            </Button>
-            <Button onClick={onCreateClick}>
-              <PlusIcon className="mr-2 size-4" />
-              创建管理员
-            </Button>
-          </div>
+      <div className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3">
+        <Filter column={table.getColumn('nickname')!} />
+        <div className="flex items-center gap-2">
+          <Button onClick={onCreateClick}>
+            <PlusIcon className="mr-2 size-4" />
+            创建管理员
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onRefresh}
+            disabled={loading}
+            title="刷新"
+          >
+            <RefreshCwIcon className={cn('size-4', loading && 'animate-spin')} />
+            <span className="sr-only">刷新</span>
+          </Button>
         </div>
         <Table>
           <TableHeader>
@@ -386,9 +383,9 @@ export function AdminDatatable({
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   )
                 })}
@@ -449,8 +446,8 @@ export function AdminDatatable({
             {Math.min(
               Math.max(
                 table.getState().pagination.pageIndex *
-                  table.getState().pagination.pageSize +
-                  table.getState().pagination.pageSize,
+                table.getState().pagination.pageSize +
+                table.getState().pagination.pageSize,
                 0
               ),
               table.getRowCount()
@@ -492,7 +489,7 @@ export function AdminDatatable({
                       variant={isActive ? 'default' : 'ghost'}
                       className={cn(
                         !isActive &&
-                          'bg-primary/10 text-primary hover:bg-primary/20'
+                        'bg-primary/10 text-primary hover:bg-primary/20'
                       )}
                       onClick={() => table.setPageIndex(page - 1)}
                       aria-current={isActive ? 'page' : undefined}
@@ -625,10 +622,10 @@ export function AdminDatatable({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {adminToToggle?.status ? '启用管理员' : '禁用管理员'}
+              {adminToToggle?.status ? '禁用管理员' : '启用管理员'}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              确定要{adminToToggle?.status ? '启用' : '禁用'}管理员{' '}
+              确定要{adminToToggle?.status ? '禁用' : '启用'}管理员{' '}
               <span className="font-medium text-foreground">{adminToToggle?.nickname}</span> 吗？
             </AlertDialogDescription>
           </AlertDialogHeader>

@@ -429,123 +429,121 @@ export function UserDatatable({
 
   return (
     <div className="w-full">
-      <div className="border-b">
-        {/* 筛选区域 */}
-        <div className="flex flex-wrap items-center gap-3 py-4 border-b">
-          {/* 用户ID */}
-          <Input
-            type="number"
-            placeholder="用户ID"
-            value={localFilters.userId ?? ''}
-            onChange={(e) =>
-              setLocalFilters((prev) => ({
-                ...prev,
-                userId: e.target.value ? Number(e.target.value) : undefined,
-              }))
-            }
-            onKeyDown={handleKeyDown}
-            className="w-48"
-          />
+      {/* 筛选区域 */}
+      <div className="flex flex-wrap items-center gap-3 py-4">
+        {/* 用户ID */}
+        <Input
+          type="number"
+          placeholder="用户ID"
+          value={localFilters.userId ?? ''}
+          onChange={(e) =>
+            setLocalFilters((prev) => ({
+              ...prev,
+              userId: e.target.value ? Number(e.target.value) : undefined,
+            }))
+          }
+          onKeyDown={handleKeyDown}
+          className="w-48"
+        />
 
-          {/* 用户昵称 */}
-          <Input
-            placeholder="用户昵称"
-            value={localFilters.nickname ?? ''}
-            onChange={(e) =>
-              setLocalFilters((prev) => ({
-                ...prev,
-                nickname: e.target.value || undefined,
-              }))
-            }
-            onKeyDown={handleKeyDown}
-            className="w-48"
-          />
+        {/* 用户昵称 */}
+        <Input
+          placeholder="用户昵称"
+          value={localFilters.nickname ?? ''}
+          onChange={(e) =>
+            setLocalFilters((prev) => ({
+              ...prev,
+              nickname: e.target.value || undefined,
+            }))
+          }
+          onKeyDown={handleKeyDown}
+          className="w-48"
+        />
 
-          {/* 邮箱 */}
-          <Input
-            type="email"
-            placeholder="邮箱"
-            value={localFilters.email ?? ''}
-            onChange={(e) =>
-              setLocalFilters((prev) => ({
-                ...prev,
-                email: e.target.value || undefined,
-              }))
-            }
-            onKeyDown={handleKeyDown}
-            className="w-48"
-          />
+        {/* 邮箱 */}
+        <Input
+          type="email"
+          placeholder="邮箱"
+          value={localFilters.email ?? ''}
+          onChange={(e) =>
+            setLocalFilters((prev) => ({
+              ...prev,
+              email: e.target.value || undefined,
+            }))
+          }
+          onKeyDown={handleKeyDown}
+          className="w-48"
+        />
 
-          {/* 手机号 */}
-          <Input
-            type="tel"
-            placeholder="手机号"
-            value={localFilters.phone ?? ''}
-            onChange={(e) =>
-              setLocalFilters((prev) => ({
-                ...prev,
-                phone: e.target.value || undefined,
-              }))
-            }
-            onKeyDown={handleKeyDown}
-            className="w-48"
-          />
+        {/* 手机号 */}
+        <Input
+          type="tel"
+          placeholder="手机号"
+          value={localFilters.phone ?? ''}
+          onChange={(e) =>
+            setLocalFilters((prev) => ({
+              ...prev,
+              phone: e.target.value || undefined,
+            }))
+          }
+          onKeyDown={handleKeyDown}
+          className="w-48"
+        />
 
-          {/* 状态 */}
-          <Select
-            value={localFilters.status === undefined ? 'all' : localFilters.status ? 'true' : 'false'}
-            onValueChange={(value) => {
-              const newFilters = {
-                ...localFilters,
-                status: value === 'all' ? undefined : value === 'true',
-              }
-              setLocalFilters(newFilters)
-              // 状态变化时立即触发搜索
-              const cleanedFilters: UserFilters = {}
-              if (newFilters.userId) cleanedFilters.userId = newFilters.userId
-              if (newFilters.nickname?.trim()) cleanedFilters.nickname = newFilters.nickname.trim()
-              if (newFilters.email?.trim()) cleanedFilters.email = newFilters.email.trim()
-              if (newFilters.phone?.trim()) cleanedFilters.phone = newFilters.phone.trim()
-              if (newFilters.status !== undefined) cleanedFilters.status = newFilters.status
-              onFiltersChange?.(cleanedFilters)
-            }}
+        {/* 状态 */}
+        <Select
+          value={localFilters.status === undefined ? 'all' : localFilters.status ? 'true' : 'false'}
+          onValueChange={(value) => {
+            const newFilters = {
+              ...localFilters,
+              status: value === 'all' ? undefined : value === 'true',
+            }
+            setLocalFilters(newFilters)
+            // 状态变化时立即触发搜索
+            const cleanedFilters: UserFilters = {}
+            if (newFilters.userId) cleanedFilters.userId = newFilters.userId
+            if (newFilters.nickname?.trim()) cleanedFilters.nickname = newFilters.nickname.trim()
+            if (newFilters.email?.trim()) cleanedFilters.email = newFilters.email.trim()
+            if (newFilters.phone?.trim()) cleanedFilters.phone = newFilters.phone.trim()
+            if (newFilters.status !== undefined) cleanedFilters.status = newFilters.status
+            onFiltersChange?.(cleanedFilters)
+          }}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="全部状态" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部状态</SelectItem>
+            <SelectItem value="true">正常</SelectItem>
+            <SelectItem value="false">禁用</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* 搜索按钮 */}
+
+
+        {/* 清除筛选 */}
+        {hasFilters && (
+          <Button variant="ghost" size="sm" onClick={handleReset}>
+            <XIcon className="mr-1 size-4" />
+            清除筛选
+          </Button>
+        )}
+
+        {/* 刷新按钮 */}
+        <div className="ml-auto space-x-2">
+          <Button size="icon" variant="outline" onClick={handleSearch}>
+            <SearchIcon className="size-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={onRefresh}
+            disabled={loading}
+            title="刷新"
           >
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="全部状态" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">全部状态</SelectItem>
-              <SelectItem value="true">正常</SelectItem>
-              <SelectItem value="false">禁用</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* 搜索按钮 */}
-
-
-          {/* 清除筛选 */}
-          {hasFilters && (
-            <Button variant="ghost" size="sm" onClick={handleReset}>
-              <XIcon className="mr-1 size-4" />
-              清除筛选
-            </Button>
-          )}
-
-          {/* 刷新按钮 */}
-          <div className="ml-auto space-x-2">
-            <Button size="icon" variant="outline" onClick={handleSearch}>
-              <SearchIcon className="size-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={onRefresh}
-              disabled={loading}
-              title="刷新"
-            >
-              <RefreshCwIcon className={cn('size-4', loading && 'animate-spin')} />
-            </Button>
-          </div>
+            <RefreshCwIcon className={cn('size-4', loading && 'animate-spin')} />
+          </Button>
         </div>
 
         <Table>

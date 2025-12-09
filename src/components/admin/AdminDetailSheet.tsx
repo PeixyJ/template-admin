@@ -95,8 +95,8 @@ export function AdminDetailSheet({
                   value={String(adminDetail.id)}
                   className="text-sm text-muted-foreground"
                 />
-                <Badge variant={!adminDetail.status ? 'default' : 'destructive'}>
-                  {adminDetail.statusDesc || (!adminDetail.status ? '正常' : '已禁用')}
+                <Badge variant={adminDetail.status ? 'default' : 'destructive'}>
+                  {adminDetail.statusDesc || (adminDetail.status ? '正常' : '已禁用')}
                 </Badge>
               </div>
             </div>

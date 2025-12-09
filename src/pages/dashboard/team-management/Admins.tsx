@@ -69,7 +69,7 @@ export default function Admins() {
 
   const handleToggleStatus = async (admin: AdminVO) => {
     const newStatus = !admin.status
-    const action = newStatus ? '禁用' : '启用'
+    const action = newStatus ? '启用' : '禁用'
 
     try {
       const response = await updateAdminStatus(admin.id, newStatus)
